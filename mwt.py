@@ -40,8 +40,8 @@ import mwt_tracking
 scene_dir = "/Users/justinfung/Desktop/udacity/mwt/private/scenes/test"
 os.chdir(scene_dir)
 
-WAVE_LOG_FILE = "wave_log_output.csv"
-TRACKED_WAVE_FILE = "tracked_wave_output.csv"
+WAVE_LOG_FILE = "wave_log.csv"
+TRACKED_WAVE_FILE = "tracked_waves.mp4"
 
 
 ## ========================================================
@@ -103,23 +103,21 @@ def draw(waves, frame, resize_factor):
     return frame
 
 
-def analyze(video):
+def analyze(video, log):
     """
     Main routine for analyzing nearshore wave videos.
+    Overlays detected waves onto orginal frames and writes to a new video.
+    Modifies passed log with detected wave attrbutes, frame by frame.
 
     Args:
       video: mp4 vid
-      outputfilename:
+      log: empty list to append wave attributes, for CSV-ready formatting.
 
     Returns:
       VOID:
-
     """
     # initiate empty list of potential waves
-    # and a log for csv output
     Waves = []
-    frame_num = 1
-    log = []
 
     # grab some video stats and initialize a global counter
     num_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -187,14 +185,11 @@ def analyze(video):
 
     # clean-up
     out.release()
-
-    # return log of waves to main
-    return log
     
 
 def main(argv):
+    # command line should have one argument for the name of the videofile
     inputfile = ''
-    
     try:
         opts, args = getopt.getopt(argv, "i:")
     except getopt.GetoptError:
@@ -217,17 +212,18 @@ def main(argv):
     if not successful_read:
         sys.exit('Cannot read video file.')
 
-    # analyze and write out
+    # initialize a wavelog list, analyze and write out
+    wave_log = []
     print "Writing to tracked_waves_output.mp4"
-    log = analyze(inputvideo)
+    log = analyze(inputvideo, wave_log)
 
     # write log to CSV
-    headers = ["frame_num", "wave_id", "max_mass", "displacement", 
-               "frame_birth", "frame_death", "is_wave", "centroid"]
+    wave_log_headers = ["frame_num", "wave_id", "max_mass", "displacement", 
+                        "frame_birth", "frame_death", "is_wave", "centroid"]
     with open("output_test.csv", "wb") as csvfile:
         writer = csv.writer(csvfile, delimiter=',')
-        writer.writerow(headers)
-        for row in log:
+        writer.writerow(wave_log_headers)
+        for row in wave_log:
             writer.writerow(row)
     
     # clean up
