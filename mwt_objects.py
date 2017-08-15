@@ -24,7 +24,7 @@ ANALYSIS_FRAME_WIDTH = 320          # width of frame in analysis
 ANALYSIS_FRAME_HEIGHT = 180         # height of frame in analysis
 
 DISPLACEMENT_THRESHOLD = 10         # minimum displacement to be considered an actual wave
-MAX_MASS_THRESHOLD = 1000           # minimum mass to be considered an actual wave
+MASS_THRESHOLD = 1000           # minimum mass to be considered an actual wave
 
 GLOBAL_WAVE_AXIS = 5.0              # axis of major waves in the scene, counter clockwise from horizon
 
@@ -39,8 +39,7 @@ class Section():
         self.name = _generate_name()
         self.points = points 
         self.birth = birth
-        self.centroid = [int(sum([p[0][0] for p in self.points]) / len(self.points)), 
-                         int(sum([p[0][1] for p in self.points]) / len(self.points))]
+        self.centroid = _get_centroid(self.points)
         self.axis_angle = GLOBAL_WAVE_AXIS 
         self.original_axis = (np.tan(np.deg2rad(-GLOBAL_WAVE_AXIS)),
                               -1, 
@@ -52,11 +51,31 @@ class Section():
         self.boundingbox_coors = np.int0(cv2.boxPoints(cv2.minAreaRect(points)))
         self.displacement_vec = deque([0], maxlen = TRACKING_HISTORY)
         self.displacement = 0
-        self.max_mass = None
+        self.mass = len(self.points)
         self.is_wave = False
         self.death = None
 
 ## ========================================================
+
+def _get_centroid(points):
+    """
+    function for getting the centroid of an object that is represented
+    by positive pixels in a bilevel image.
+
+    Args:
+      points: array of points
+    Returns:
+      centroid: 2 element array as [x,y] is points is not empty
+    """
+
+    centroid = None
+
+    if points is not None:
+        centroid = [int(sum([p[0][0] for p in points]) / len(points)), 
+                    int(sum([p[0][1] for p in points]) / len(points))]
+
+    return centroid
+
 
 def _get_searchROI_coors(centroid, axis_angle, searchROI_buffer, frame_width):
     delta_y_left = np.round(centroid[0] * np.tan(np.deg2rad(axis_angle)))
@@ -159,10 +178,8 @@ def update_centroid(wave):
     Returns:
     VOID: updates section.centroid
     """
-    x = [p[0][0] for p in wave.points]
-    y = [p[0][1] for p in wave.points]
-    
-    wave.centroid = [int(sum(x) / len(wave.points)), int(sum(y) / len(wave.points))]
+
+    wave.centroid = _get_centroid(wave.points)
 
 
 def update_boundingbox_coors(wave):
@@ -227,20 +244,21 @@ def update_displacement(wave):
     wave.displacement = wave.displacement_vec[-1]
 
 
-def update_max_mass(wave):
+def update_mass(wave):
     """calculates mass of the wave by weighting each pixel in a search ROI equally
-       and performing a simple count.  updates only if new max is achieved.
+       and performing a simple count.
 
     Args:
     wave: a Section object
 
     Returns:
-    VOID: updates section.max_mass attribute.
+    VOID: updates section.mass attribute.
     """
-    if len(wave.points) > wave.max_mass:
-        wave.max_mass = len(wave.points)
-    else:
-        return
+    #if len(wave.points) > wave.max_mass:
+    #    wave.mass = len(wave.points)
+    #else:
+    #    return
+    wave.mass = len(wave.points)
 
 
 def update_is_wave(wave):
@@ -253,7 +271,7 @@ def update_is_wave(wave):
     Returns:
     VOID: changes section.is_wave boolean to True is conditions are met.
     """
-    if wave.displacement >= DISPLACEMENT_THRESHOLD and wave.max_mass >= MAX_MASS_THRESHOLD:
+    if wave.displacement >= DISPLACEMENT_THRESHOLD and wave.mass >= MASS_THRESHOLD:
         #print "WAVE DETECTED."
         wave.is_wave = True
     else:

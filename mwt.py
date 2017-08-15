@@ -41,6 +41,7 @@ scene_dir = "/Users/justinfung/Desktop/udacity/mwt/private/scenes/test"
 os.chdir(scene_dir)
 
 WAVE_LOG_FILE = "wave_log.csv"
+DETECTED_WAVE_REPORT_FILE = "detected_waves.txt"
 TRACKED_WAVE_FILE = "tracked_waves.mp4"
 
 
@@ -173,7 +174,7 @@ def analyze(video, log):
 
         # store wave stats to log
         for wave in Waves:
-            log.append((frame_num, wave.name, wave.max_mass, wave.displacement, 
+            log.append((frame_num, wave.name, wave.mass, wave.displacement, 
                         wave.birth, wave.death, wave.is_wave, wave.centroid))
 
         # increment frame count
@@ -218,7 +219,7 @@ def main(argv):
     log = analyze(inputvideo, wave_log)
 
     # write log to CSV
-    wave_log_headers = ["frame_num", "wave_id", "max_mass", "displacement", 
+    wave_log_headers = ["frame_num", "wave_id", "wave_mass", "displacement", 
                         "frame_birth", "frame_death", "is_wave", "centroid"]
     with open("output_test.csv", "wb") as csvfile:
         writer = csv.writer(csvfile, delimiter=',')

@@ -95,8 +95,8 @@ def track(list_of_waves, frame, frame_number):
             # update absolute displacement
             mwt_objects.update_displacement(wave)
 
-            # update max wave mass
-            mwt_objects.update_max_mass(wave)
+            # update wave mass
+            mwt_objects.update_mass(wave)
 
             # check mass and dynamics conditionals
             mwt_objects.update_is_wave(wave)
