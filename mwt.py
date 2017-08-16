@@ -117,7 +117,7 @@ def analyze(video, log):
       log: empty list to append wave attributes, for CSV-ready formatting.
 
     Returns:
-      VOID:
+      VOID: none
     """
     # initiate empty list of potential waves
     Tracked_Waves = []
@@ -149,7 +149,6 @@ def analyze(video, log):
 
         # Read frames until end of clip
         successful_read, original_frame = video.read()
-        
         if not successful_read:
             break
 
@@ -162,28 +161,27 @@ def analyze(video, log):
         # track all waves in Tracked Waves
         mwt_tracking.track(Tracked_Waves, analysis_frame, frame_num)
 
-        # do some tidying up of duplicate and dead waves
+        # write tracked wave stats to tracked wave log
         for wave in Tracked_Waves:
+            log.append((frame_num, wave.name, wave.mass, wave.displacement, 
+                        wave.birth, wave.death, wave.is_wave, wave.centroid))
             
+        # Remove dead waves from Tracked_Waves
+        for wave in Tracked_Waves:
             # Remove dead waves.
             if wave.death is not None:
-
                 # if wave became actual wave, add to Dead_Waves.
                 if wave.is_wave is True:
                     Dead_Waves.append(wave)
-                
                 Tracked_Waves.remove(wave)
-                break
 
-            # Remove Waves that have become merged.
+        # Remove duplicate waves, keeping earliest wave
+        Tracked_Waves.sort(key=lambda x: x.birth, reverse=True)
+        for wave in Tracked_Waves:
             other_waves = [wav for wav in Tracked_Waves if not wav == wave]
             if mwt_tracking.will_be_merged(wave, other_waves):
                 Tracked_Waves.remove(wave)
-
-            # write tracked wave stats to tracked wave log
-            log.append((frame_num, wave.name, wave.mass, wave.displacement, 
-                        wave.birth, wave.death, wave.is_wave, wave.centroid))
-
+        Tracked_Waves.sort(key=lambda x: x.birth, reverse=False)
 
         # check sections for any new potential waves and add to Tracked Waves
         for section in Sections:
@@ -243,7 +241,7 @@ def main(argv):
     # initialize a wavelog list, analyze and write out
     wave_log = []
     print "Writing to tracked_waves_output.mp4"
-    log = analyze(inputvideo, wave_log)
+    analyze(inputvideo, wave_log)
 
     # write log to CSV
     wave_log_headers = ["frame_num", "wave_id", "wave_mass", "displacement", 

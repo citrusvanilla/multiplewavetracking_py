@@ -40,19 +40,20 @@ class Section():
         self.points = points 
         self.birth = birth
         self.axis_angle = GLOBAL_WAVE_AXIS 
-
         self.centroid = _get_centroid(self.points)
         self.original_axis = _get_standard_form_line(self.centroid, 
-                                                     self.axis_angle)        
-        
+                                                     self.axis_angle)
         self.searchROI_coors = _get_searchROI_coors(self.centroid, 
                                                     self.axis_angle, 
                                                     SEARCH_REGION_BUFFER, 
-                                                    ANALYSIS_FRAME_WIDTH)           # tuple of (x,y)
+                                                    ANALYSIS_FRAME_WIDTH)
         self.boundingbox_coors = np.int0(cv2.boxPoints(cv2.minAreaRect(points)))
         self.displacement = 0
-        self.displacement_vec = deque([0], maxlen = TRACKING_HISTORY)
+        self.max_displacement = self.displacement
+        self.displacement_vec = deque([self.displacement], 
+                                      maxlen = TRACKING_HISTORY)
         self.mass = len(self.points)
+        self.max_mass = self.mass
         self.is_wave = False
         self.death = None
         
@@ -174,9 +175,9 @@ def update_points(wave, frame):
     # DOCS: https://stackoverflow.com/questions/10469235/
     #       opencv-apply-mask-to-a-color-image
     rect = wave.searchROI_coors
-    poly = np.array([rect], dtype=np.int32)                                 #poly object
-    img = np.zeros((ANALYSIS_FRAME_HEIGHT, ANALYSIS_FRAME_WIDTH), np.uint8)  #blank mask
-    img = cv2.fillPoly(img, poly, 255)                                          #mask with ROI
+    poly = np.array([rect], dtype=np.int32)
+    img = np.zeros((ANALYSIS_FRAME_HEIGHT, ANALYSIS_FRAME_WIDTH), np.uint8)
+    img = cv2.fillPoly(img, poly, 255)
     res = cv2.bitwise_and(frame, frame, mask = img) 
     points = cv2.findNonZero(res)
     
@@ -215,14 +216,15 @@ def update_centroid(wave):
 
 
 def update_boundingbox_coors(wave):
-    """finds minimum area rectangle that bounds the points inside the wave's
-       search ROI.  returns four coordinates of the bounding box.
+    """
+    Finds minimum area rectangle that bounds the points inside the wave's
+    search ROI. Returns four coordinates of the bounding box.
 
     Args:
-    wave: a Section object
+      wave: a Section object
 
     Returns:
-    VOID: updates section.boundingbox_coors attribute.
+      NONE: updates section.boundingbox_coors attribute
     """
 
     boundingbox_coors = None
@@ -248,16 +250,18 @@ def update_boundingbox_coors(wave):
     wave.boundingbox_coors = boundingbox_coors
 
 
-def update_displacement_vec(wave):
-    """calculates the displacement of the wave orthogonal to its major axis.
-       stores displacement to a deque .
+def update_displacement(wave):
+    """
+    Evaluates orthogonal displacement compared to original axis.
+    Updates max_displacement if necessary.
 
     Args:
-    wave: a Section object
+      wave: a wave object
 
     Returns:
-    VOID: append positional displacement to the queue.
+      NONE: updates wave.displacement and wave.max_displacement attributes
     """
+    # update instantaneous displacement of the wave
     if wave.centroid is not None:
         a = wave.original_axis[0]
         b = wave.original_axis[1]
@@ -265,37 +269,42 @@ def update_displacement_vec(wave):
         x0 = wave.centroid[0]
         y0 = wave.centroid[1]
 
-        disp = np.abs(a*x0 + b*y0 + c) / math.sqrt(a**2 + b**2)
+        ortho_disp = np.abs(a*x0 + b*y0 + c) / math.sqrt(a**2 + b**2)
+        
+        wave.displacement = int(ortho_disp)
 
-        wave.displacement_vec.append(int(disp))
+        # update max displacement of the wave
+        if wave.displacement > wave.max_displacement:
+            wave.max_displacement = wave.displacement
 
 
-def update_displacement(wave):
-    """evaluates absolute displacement based on comparison with original position.
+def update_displacement_vec(wave):
+    """
+    Appends displacement to a deque.
 
     Args:
-    wave: a Section object
+      wave: a Section object
 
     Returns:
-    VOID: updates section.displacement attribute.
+      NONE: append positional displacement to the queue.
     """
-    wave.displacement = wave.displacement_vec[-1]
+
+    wave.displacement_vec.append(wave.displacement)
 
 
 def update_mass(wave):
-    """calculates mass of the wave by weighting each pixel in a search ROI equally
-       and performing a simple count.
+    """
+    Calculates mass of the wave by weighting each pixel in a search ROI
+    equally and performing a simple count.  Updates max_mass attribute 
+    if necessary.
 
     Args:
-    wave: a Section object
+      wave: a Section object
 
     Returns:
-    VOID: updates section.mass attribute.
+      NONE: updates wave.mass and wave.max_mass attributes
     """
-    #if len(wave.points) > wave.max_mass:
-    #    wave.mass = len(wave.points)
-    #else:
-    #    return
+    # update instantaneous mass of the wave
     mass = 0
     
     if wave.points is not None:
@@ -303,22 +312,24 @@ def update_mass(wave):
 
     wave.mass = mass
 
+    # update max mass for the wave
+    if wave.mass > wave.max_mass:
+        wave.max_mass = wave.mass
+
 
 def update_is_wave(wave):
-    """updates the boolean section.is_wave to True if wave mass and wave displacement 
-       exceed user-defined thresholds.
+    """
+    Updates the boolean wave.is_wave to True if wave mass and wave 
+    displacement exceed user-defined thresholds.  Once a wave is a
+    wave, wave is not checked again.
 
     Args:
-    wave: a Section object
+      wave: a wave object
 
     Returns:
-    VOID: changes section.is_wave boolean to True is conditions are met.
+      NONE: changes wave.is_wave boolean to True if conditions are met
     """
-    is_wave = False
-
-    if wave.displacement >= DISPLACEMENT_THRESHOLD \
-       and wave.mass >= MASS_THRESHOLD:
-        #print "WAVE DETECTED."
-        is_wave = True
-    
-    wave.is_wave = is_wave
+    if wave.is_wave is False:
+        if wave.max_displacement >= DISPLACEMENT_THRESHOLD \
+           and wave.max_mass >= MASS_THRESHOLD:
+            wave.is_wave = True
