@@ -8,100 +8,111 @@
 ## ========================================================
 
 """Routine for detecting potential waves.
-   Helper functions above, routines below.
 
-   Method for detecting is:
-   -1. detect contours
-   -2. filter contours
-   -3. create list of "Section" objects from filtered contours
-   """
+Method for detecting is:
+-1. detect contours
+-2. filter contours
+-3. create list of wave objects from filtered contours
+"""
 
 from __future__ import division
 
-import cv2
 import math
-import numpy as np
 from collections import deque
+
+import cv2
+import numpy as np
 
 from mwt_objects import Section
 
-FLAGS_FILTER_BY_AREA = True         # boolean flag to filter blobs by area
-FLAGS_FILTER_BY_INERTIA = True      # boolean flag to filter blobs by inertia (shape)
+# Boolean flag to filter blobs by area:
+FLAGS_FILTER_BY_AREA = True
+# Boolean flag to filter blobs by inertia (shape):
+FLAGS_FILTER_BY_INERTIA = True
 
-MINIMUM_AREA = 100                  # minimum area threshold for contour
-MAXIMUM_AREA = 1e7                  # maximum area threshold for contour
-MINIMUM_INERTIA_RATIO = 0.0         # minimum inertia threshold for contour
-MAXIMUM_INERTIA_RATIO = 0.1         # maximum inertia threshold for contour
+# Minimum area threshold for contour:
+MINIMUM_AREA = 100
+# Maximum area threshold for contour:
+MAXIMUM_AREA = 1e7
+# Minimum inertia threshold for contour:
+MINIMUM_INERTIA_RATIO = 0.0
+# Maximum inertia threshold for contour:
+MAXIMUM_INERTIA_RATIO = 0.1
 
 
 def find_contours(frame):
     """Contour finding function utilizing OpenCV.
 
     Args:
-    frame: A frame from a cv2.video_reader object to process.
+      frame: A frame from a cv2.video_reader object to process.
 
     Returns:
-    contours: An array of contours, each represented by an array of points.
+      contours: An array of contours, each represented by an array of
+                points.
     """
-    # Find All Contours: 
-    # DOCS: http://docs.opencv.org/2.4/modules/imgproc/doc/structural_analysis_and_shape_descriptors.html?highlight=findcontours#cv.FindContours
-    # DOCS: https://opencv-python-tutroals.readthedocs.io/en/latest/py_tutorials/py_imgproc/py_contours/py_contour_features/py_contour_features.html
-    _, contours, hierarchy = cv2.findContours(image = frame,                    # source
-                                              mode = cv2.RETR_EXTERNAL,         # Contour retrieval mode; retrieves only the extreme outer contours
-                                              method = cv2.CHAIN_APPROX_NONE,   # Contour approximation method; stores absolutely all the contour points
-                                              hierarchy = None,                 # Optional output vector, containing information about the image topology
-                                              offset= None)                     # Optional offset by which every contour point is shifted
+    _, contours, hierarchy = cv2.findContours(
+                                image=frame,
+                                mode=cv2.RETR_EXTERNAL,
+                                method=cv2.CHAIN_APPROX_NONE,
+                                hierarchy=None,
+                                offset=None)
 
     return contours
 
 
 def filter_contour(contour,
-                   area = FLAGS_FILTER_BY_AREA, 
-                   inertia = FLAGS_FILTER_BY_INERTIA,
-                   minArea = MINIMUM_AREA,
-                   maxArea = MAXIMUM_AREA,
-                   minInertiaRatio = MINIMUM_INERTIA_RATIO,
-                   maxInertiaRatio = MAXIMUM_INERTIA_RATIO):
-    """Contour filtering function utilizing OpenCV.
+                   area=FLAGS_FILTER_BY_AREA, 
+                   inertia=FLAGS_FILTER_BY_INERTIA,
+                   minArea=MINIMUM_AREA,
+                   maxArea=MAXIMUM_AREA,
+                   minInertiaRatio=MINIMUM_INERTIA_RATIO,
+                   maxInertiaRatio=MAXIMUM_INERTIA_RATIO):
+    """Contour filtering function utilizing OpenCV.  In our case,
+    we are looking for oblong shapes that exceed a user-defined area.
 
     Args:
-    contour: A contour from an array of contours.
-    area: boolean flag to filter contour by area.
-    inertia: boolean flag to filter contour by inertia.
-    minArea: minimum area threshold for contour.
-    maxArea: maximum area threshold for contour.
-    minInertiaRatio: minimum inertia threshold for contour.
-    maxInertiaRatio: maximum inertia threshold for contour.
+      contour: A contour from an array of contours
+      area: boolean flag to filter contour by area
+      inertia: boolean flag to filter contour by inertia
+      minArea: minimum area threshold for contour
+      maxArea: maximum area threshold for contour
+      minInertiaRatio: minimum inertia threshold for contour
+      maxInertiaRatio: maximum inertia threshold for contour
 
     Returns:
-    ret: A boolean TRUE if contour meets conditions, else FALSE.
+      ret: A boolean TRUE if contour meets conditions, else FALSE
     """
-    # initialize return value
+    # Initialize the return value.
     ret = True
 
-    # obtains contour moments
+    # Obtain contour moments.
     moments = cv2.moments(contour)
 
-    # Filter Contours By Area
-    if area == True and ret == True:
+    # Filter Contours By Area.
+    if area is True and ret is True:
         area = cv2.contourArea(contour)
         if area < minArea or area >= maxArea:
             ret = False
 
-    # Filter contours by inertia
-    if inertia == True and ret == True:
-        denominator = math.sqrt((2 * moments['m11']) ** 2 + (moments['m20'] - moments['m02']) ** 2)
+    # Filter contours by inertia.
+    if inertia is True and ret is True:
+        denominator = (math.sqrt((2*moments['m11'])**2 
+                       + (moments['m20']-moments['m02'])**2))
         epsilon = 0.01
         ratio = 0.0
 
         if denominator > epsilon:
-            cosmin = (moments['m20'] - moments['m02']) / denominator;
-            sinmin = 2 * moments['m11'] / denominator;
+            cosmin = (moments['m20']-moments['m02']) / denominator;
+            sinmin = 2*moments['m11'] / denominator;
             cosmax = -cosmin;
             sinmax = -sinmin;
                 
-            imin = 0.5 * (moments['m20'] + moments['m02']) - 0.5 * (moments['m20'] - moments['m02']) * cosmin - moments['m11'] * sinmin;
-            imax = 0.5 * (moments['m20'] + moments['m02']) - 0.5 * (moments['m20'] - moments['m02']) * cosmax - moments['m11'] * sinmax;
+            imin = (0.5*(moments['m20']+moments['m02']) 
+                    - 0.5*(moments['m20']-moments['m02'])*cosmin 
+                    - moments['m11']*sinmin)
+            imax = (0.5*(moments['m20']+moments['m02']) 
+                    - 0.5*(moments['m20']-moments['m02'])*cosmax 
+                    - moments['m11']*sinmax)
             ratio = imin / imax;
         else:
             ratio = 1;  
@@ -112,41 +123,40 @@ def filter_contour(contour,
 
     return ret
 
+
 ## ========================================================
 
+
 def detect_sections(frame, frame_number):
-    """Finds sections that meet certain criteria.
+    """Finds sections that meet the user-defined criteria.
 
     Args:
-    frame: a frame from a cv2.video_reader object.
-    frame_number: number of the frame in the video sequence.
+      frame: a frame from a cv2.video_reader object
+      frame_number: number of the frame in the video sequence
 
     Returns:
-    sections: a list of Section objects.
+      sections: a list of Section objects
     """    
-    # convert to single channel for blob detection if necessary 
+    # Convert to single channel for blob detection if necessary.
     if len(frame.shape) > 2:
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
-    # initiate empty list of sections
+    # Initiate and empty list of sections.
     sections = []
 
-    # 1. find contours
+    # 1. Find the contours.
     contours = find_contours(frame)
-    #visual = frame
 
-    # 2. filter contours
+    # 2. Filter the contours.
     for contour in contours:
         
-        # filter
-        if filter_contour(contour) == False:
+        if filter_contour(contour) is False:
             continue
         
-        # if contour passes thresholds, convert to Section
-        section = Section(points = contour,
-                          birth = frame_number)
+        # If contour passes thresholds, convert it to a Section.
+        section = Section(points=contour, birth=frame_number)
 
-        # 3. add section to sections
+        # 3. Add the section to sections list.
         sections.append(section)
 
     return sections

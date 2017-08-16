@@ -8,74 +8,80 @@
 ## ========================================================
 
 """Routine for preprocessing video frames.
-   Helper functions above, routines below.
 
-   Method of preprocessing is:
-   -1. resize image
-   -2. extract foreground 
-   -3. denoise image
-   """
+ Method of preprocessing is:
+ -1. resize image
+ -2. extract foreground 
+ -3. denoise image
+"""
 
 from __future__ import division
 
 import cv2
 
-RESIZE_FACTOR = 0.25        # resize factor for video analysis
-BACKGROUND_HISTORY = 300    # number of frames that constitute background history
-NUM_GAUSSIANS = 5           # number of gaussians in BG mixture model
-BACKGROUND_RATIO = 0.7      # minimum percent of frame considered background
-MORPH_KERN_SIZE = 5         # morphological kernel size (square)
+# Resize factor (downsize) for analysis:
+RESIZE_FACTOR = 0.25   
+
+# Number of frames that constitute the background history:   
+BACKGROUND_HISTORY = 300 
+
+# Number of gaussians in BG mixture model:
+NUM_GAUSSIANS = 5
+
+# Minimum percent of frame considered background:
+BACKGROUND_RATIO = 0.7
+
+# Morphological kernel size (square):    
+MORPH_KERN_SIZE = 5
+
+# Init the background modeling and foreground extraction mask.
+mask = cv2.bgsegm.createBackgroundSubtractorMOG(
+                                  history=BACKGROUND_HISTORY,
+                                  nmixtures=NUM_GAUSSIANS,
+                                  backgroundRatio=BACKGROUND_RATIO,
+                                  noiseSigma=0)
+
+# Init the morphological transformations for denoising kernel.
+kernel = cv2.getStructuringElement(cv2.MORPH_RECT,
+                                   (MORPH_KERN_SIZE,MORPH_KERN_SIZE))
 
 
-# 1. RESIZE RAW VIDEO FRAMES
-# DOCS: http://docs.opencv.org/3.1.0/da/d6e/tutorial_py_geometric_transformations.html
 def _resize(frame):
     """Resizing function utilizing OpenCV.
 
     Args:
-    frame: A frame from a cv2.video_reader object to process.
+      frame: A frame from a cv2.video_reader object to process
 
     Returns:
-    A resized frame.
+      resized_frame: the frame, resized
     """
-    return cv2.resize(frame,                                # input frame
-                      None,                                 # output frame
-                      fx = RESIZE_FACTOR,                   # x-axis scale factor
-                      fy = RESIZE_FACTOR,                   # y-axis scale factor
-                      interpolation = cv2.INTER_AREA)       # rescale interpolation method
+    resized_frame = cv2.resize(frame,
+                               None,
+                               fx=RESIZE_FACTOR,
+                               fy=RESIZE_FACTOR,
+                               interpolation=cv2.INTER_AREA)
 
-# 2. BACKGROUND MODELING AND FOREGROUND EXTRACTION
-# DOCS: http://docs.opencv.org/trunk/db/d5c/tutorial_py_bg_subtraction.html
-mask = cv2.bgsegm.createBackgroundSubtractorMOG(history = BACKGROUND_HISTORY,           # length of history
-                                                nmixtures = NUM_GAUSSIANS,              # num. of gaussian mixtures
-                                                backgroundRatio = BACKGROUND_RATIO,     # minimum percent of frame considered background
-                                                noiseSigma = 0)                         # noise strength
+    return resized_frame
 
-## 3. MORPHOLOGICAL TRANSFORMATIONS FOR DENOISING
-## DOCS: http://docs.opencv.org/3.0-beta/doc/py_tutorials/py_imgproc/py_morphological_ops/py_morphological_ops.html
-kernel = cv2.getStructuringElement(cv2.MORPH_RECT,                          # shape (rectangle)
-                                   (MORPH_KERN_SIZE,MORPH_KERN_SIZE))       # kernel size (square)
-
-## ========================================================
 
 def preprocess(input):
-    """Preprocesses video frames through resizing, background modeling,
-    and denoising.
+    """Preprocesses video frames through resizing, background
+    modeling, and denoising.
 
     Args:
-    input: A frame from a cv2.video_reader object to process.
+      input: A frame from a cv2.video_reader object to process
 
     Returns:
-    A preprocessed frame.
+      output: the preprocessed frame
     """
 
-    # 1. resize
+    # 1. Resize the input.
     output = _resize(input)
 
-    # 2. mask input
+    # 2. Model the background and extract the foreground with a mask.
     output = mask.apply(output)
 
-    # 3. morphological operators to suppress noise
+    # 3. Apply the morphological operators to suppress noise.
     output = cv2.morphologyEx(output, cv2.MORPH_OPEN, kernel)
 
     return output
