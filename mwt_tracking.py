@@ -81,30 +81,31 @@ def track(list_of_waves, frame, frame_number):
         mwt_objects.update_death(wave, frame_number)
 
         # if wave is still alive...
-        if wave.death is None:
+        #if wave.death is None:
 
-            # update centroid
-            mwt_objects.update_centroid(wave)
+        # update centroid
+        mwt_objects.update_centroid(wave)
 
-            # update bounding box for display
-            mwt_objects.update_boundingbox_coors(wave)
+        if wave.death is not None:
+            print wave.centroid
 
-            # update displacement vector
-            mwt_objects.update_displacement_vec(wave)
+        # update bounding box for display
+        mwt_objects.update_boundingbox_coors(wave)
 
-            # update absolute displacement
-            mwt_objects.update_displacement(wave)
+        # update displacement vector
+        mwt_objects.update_displacement_vec(wave)
 
-            # update wave mass
-            mwt_objects.update_mass(wave)
+        # update absolute displacement
+        mwt_objects.update_displacement(wave)
 
-            # check mass and dynamics conditionals
-            mwt_objects.update_is_wave(wave)
+        # update wave mass
+        mwt_objects.update_mass(wave)
 
-        else:
-            # DEBUG: print "DEAD WAVE: ", wave.displacement
-            
-            # remove wave from wave list if dead
-            list_of_waves.remove(wave)
+        # check mass and dynamics conditionals
+        mwt_objects.update_is_wave(wave)
+
+        #else:            
+        #    # remove wave from wave list if dead
+        #    list_of_waves.remove(wave)
 
 

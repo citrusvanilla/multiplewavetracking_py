@@ -33,29 +33,55 @@ NAME_SEED = 0                       # integer var seed for naming detected waves
 
 class Section():
     """filtered contours become "sections" with the following attributes.
-       attributes are updated in each frame through tracking routine.
+       dynamic attributes are updated in each frame through tracking routine.
     """
     def __init__(self, points, birth):
         self.name = _generate_name()
         self.points = points 
         self.birth = birth
-        self.centroid = _get_centroid(self.points)
         self.axis_angle = GLOBAL_WAVE_AXIS 
-        self.original_axis = (np.tan(np.deg2rad(-GLOBAL_WAVE_AXIS)),
-                              -1, 
-                              self.centroid[1]-np.tan(np.deg2rad(-GLOBAL_WAVE_AXIS))*self.centroid[0])
+
+        self.centroid = _get_centroid(self.points)
+        self.original_axis = _get_standard_form_line(self.centroid, 
+                                                     self.axis_angle)        
+        
         self.searchROI_coors = _get_searchROI_coors(self.centroid, 
                                                     self.axis_angle, 
                                                     SEARCH_REGION_BUFFER, 
                                                     ANALYSIS_FRAME_WIDTH)           # tuple of (x,y)
         self.boundingbox_coors = np.int0(cv2.boxPoints(cv2.minAreaRect(points)))
-        self.displacement_vec = deque([0], maxlen = TRACKING_HISTORY)
         self.displacement = 0
+        self.displacement_vec = deque([0], maxlen = TRACKING_HISTORY)
         self.mass = len(self.points)
         self.is_wave = False
         self.death = None
+        
 
 ## ========================================================
+
+def _get_standard_form_line(point, angle_from_horizon):
+    """
+    A function returning a 3-element array corresponding to coefficients 
+    of the standard form for a line of Ax+By=C.  Requires one point in [x,y],
+    and an angle from the horizion in degrees.
+
+    Args:
+      point: a two-element array in [x,y] representing a point 
+      angle_from_horizon: a float representing counterclockwise angle
+                          from horizon of the line
+
+    Returns:
+      coefficients: a three-element array as [A,B,C]
+    """
+    coefficients = [None, None, None]
+
+    coefficients[0] = np.tan(np.deg2rad(-angle_from_horizon))
+    coefficients[1] = -1
+    coefficients[2] = point[1] - np.tan(np.deg2rad(-angle_from_horizon)) \
+                      * point[0]
+
+    return coefficients
+
 
 def _get_centroid(points):
     """
@@ -65,7 +91,7 @@ def _get_centroid(points):
     Args:
       points: array of points
     Returns:
-      centroid: 2 element array as [x,y] is points is not empty
+      centroid: 2 element array as [x,y] if points is not empty
     """
 
     centroid = None
@@ -133,23 +159,29 @@ def update_points(wave, frame):
        using a mask.
 
     Args:
-    wave: a Section object
-    frame: frame in which to obtain new binary representation of the wave
+      wave: a Section object
+      frame: frame in which to obtain new binary representation of the wave
 
     Returns:
-    VOID: returns all points to section.points attribute.
+      VOID: returns all points to section.points attribute.
     """
+    
+    points = None
+    
     # create mask using searchROI coordinates
-    # DOCS: https://stackoverflow.com/questions/17437846/opencv-zero-pixels-outside-of-region-of-interest-with-rotated-rectangle
-    # DOCS: https://stackoverflow.com/questions/10469235/opencv-apply-mask-to-a-color-image
+    # DOCS: https://stackoverflow.com/questions/17437846/
+    #       opencv-zero-pixels-outside-of-region-of-interest-with-rotated-rectangle
+    # DOCS: https://stackoverflow.com/questions/10469235/
+    #       opencv-apply-mask-to-a-color-image
     rect = wave.searchROI_coors
     poly = np.array([rect], dtype=np.int32)                                 #poly object
     img = np.zeros((ANALYSIS_FRAME_HEIGHT, ANALYSIS_FRAME_WIDTH), np.uint8)  #blank mask
     img = cv2.fillPoly(img, poly, 255)                                          #mask with ROI
     res = cv2.bitwise_and(frame, frame, mask = img) 
-
-    # capture all points
-    wave.points = cv2.findNonZero(res)
+    points = cv2.findNonZero(res)
+    
+    # update points
+    wave.points = points
 
 
 def update_death(wave, frame_number):
@@ -193,25 +225,27 @@ def update_boundingbox_coors(wave):
     VOID: updates section.boundingbox_coors attribute.
     """
 
-    #points = wave.points
-    x = [p[0][0] for p in wave.points]
-    y = [p[0][1] for p in wave.points]
-    mean_x = np.mean(x)
-    mean_y = np.mean(y)
-    std_x = np.std(x)
-    std_y = np.std(y)
+    boundingbox_coors = None
 
-    points_without_outliers = np.array([p[0] for p in wave.points if np.abs(p[0][0] - mean_x) < 3 * std_x \
-                                                                 and np.abs(p[0][1] - mean_y) < 3 * std_y])
-    #points[abs(data - np.mean(data)) < m * np.std(data)]
+    if wave.points is not None:
+        # obtain moments of the object from its points array
+        x = [p[0][0] for p in wave.points]
+        y = [p[0][1] for p in wave.points]
+        mean_x = np.mean(x)
+        mean_y = np.mean(y)
+        std_x = np.std(x)
+        std_y = np.std(y)
 
-    rect = cv2.minAreaRect(points_without_outliers)
-    #rect = cv2.minAreaRect(wave.points)
+        # we only capture points without outliers for display purposes
+        points_without_outliers = np.array([p[0] for p in wave.points \
+                                            if np.abs(p[0][0] - mean_x) < 3 * std_x \
+                                            and np.abs(p[0][1] - mean_y) < 3 * std_y])
 
-    box = cv2.boxPoints(rect)
-    intbox = np.int0(box)
+        rect = cv2.minAreaRect(points_without_outliers)
+        box = cv2.boxPoints(rect)
+        boundingbox_coors = np.int0(box)
 
-    wave.boundingbox_coors = intbox
+    wave.boundingbox_coors = boundingbox_coors
 
 
 def update_displacement_vec(wave):
@@ -224,12 +258,16 @@ def update_displacement_vec(wave):
     Returns:
     VOID: append positional displacement to the queue.
     """
-    a, b, c = wave.original_axis[0], wave.original_axis[1], wave.original_axis[2]
-    x0, y0 = wave.centroid[0], wave.centroid[1]
+    if wave.centroid is not None:
+        a = wave.original_axis[0]
+        b = wave.original_axis[1]
+        c = wave.original_axis[2]
+        x0 = wave.centroid[0]
+        y0 = wave.centroid[1]
 
-    dist = np.abs(a*x0 + b*y0 + c) / math.sqrt(a**2 + b**2)
+        disp = np.abs(a*x0 + b*y0 + c) / math.sqrt(a**2 + b**2)
 
-    wave.displacement_vec.append(int(dist))
+        wave.displacement_vec.append(int(disp))
 
 
 def update_displacement(wave):
@@ -258,7 +296,12 @@ def update_mass(wave):
     #    wave.mass = len(wave.points)
     #else:
     #    return
-    wave.mass = len(wave.points)
+    mass = 0
+    
+    if wave.points is not None:
+        mass = len(wave.points)
+
+    wave.mass = mass
 
 
 def update_is_wave(wave):
@@ -271,8 +314,11 @@ def update_is_wave(wave):
     Returns:
     VOID: changes section.is_wave boolean to True is conditions are met.
     """
-    if wave.displacement >= DISPLACEMENT_THRESHOLD and wave.mass >= MASS_THRESHOLD:
+    is_wave = False
+
+    if wave.displacement >= DISPLACEMENT_THRESHOLD \
+       and wave.mass >= MASS_THRESHOLD:
         #print "WAVE DETECTED."
-        wave.is_wave = True
-    else:
-        return
+        is_wave = True
+    
+    wave.is_wave = is_wave

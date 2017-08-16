@@ -89,17 +89,19 @@ def draw(waves, frame, resize_factor):
     """
     # draw detection boxes on original frame and write out
     for wave in waves:
-        # get boundingbox coors from wave objects
-        rect = wave.boundingbox_coors
-
-        # resize for output
-        rect[:] = [resize_factor*rect[i] for i in range(4)]
         
-        # if wave is not yet a wave, draw yellow, else green
-        if wave.is_wave == False:
-            frame = cv2.drawContours(frame,[rect],0,(0,255,255),2) # yellow
-        else:
-            frame = cv2.drawContours(frame,[rect],0,(0,255,0),2) # green
+        if wave.death is None:
+            # get boundingbox coors from wave objects
+            rect = wave.boundingbox_coors
+
+            # resize for output
+            rect[:] = [resize_factor*rect[i] for i in range(4)]
+            
+            # if wave is not yet a wave, draw yellow, else green
+            if wave.is_wave == False:
+                frame = cv2.drawContours(frame,[rect],0,(0,255,255),2) # yellow
+            else:
+                frame = cv2.drawContours(frame,[rect],0,(0,255,0),2) # green
 
     return frame
 
@@ -118,7 +120,8 @@ def analyze(video, log):
       VOID:
     """
     # initiate empty list of potential waves
-    Waves = []
+    Tracked_Waves = []
+    Dead_Waves = []
 
     # grab some video stats and initialize a global counter
     num_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
@@ -154,28 +157,48 @@ def analyze(video, log):
         analysis_frame = mwt_preprocessing.preprocess(original_frame)
 
         # detect all sections
-        sections = mwt_detection.detect_sections(analysis_frame, frame_num)
+        Sections = mwt_detection.detect_sections(analysis_frame, frame_num)
 
-        # track all waves in Waves
-        mwt_tracking.track(Waves, analysis_frame, frame_num)
+        # track all waves in Tracked Waves
+        mwt_tracking.track(Tracked_Waves, analysis_frame, frame_num)
 
-        # check sections for any new potential waves and add to Waves
-        for section in sections:
-            if mwt_tracking.will_be_merged(section, Waves):
+        # do some tidying up of duplicate and dead waves
+        for wave in Tracked_Waves:
+            
+            # Remove dead waves.
+            if wave.death is not None:
+
+                # if wave became actual wave, add to Dead_Waves.
+                if wave.is_wave is True:
+                    Dead_Waves.append(wave)
+                
+                Tracked_Waves.remove(wave)
+                break
+
+            # Remove Waves that have become merged.
+            other_waves = [wav for wav in Tracked_Waves if not wav == wave]
+            if mwt_tracking.will_be_merged(wave, other_waves):
+                Tracked_Waves.remove(wave)
+
+            # write tracked wave stats to tracked wave log
+            log.append((frame_num, wave.name, wave.mass, wave.displacement, 
+                        wave.birth, wave.death, wave.is_wave, wave.centroid))
+
+
+        # check sections for any new potential waves and add to Tracked Waves
+        for section in Sections:
+            if mwt_tracking.will_be_merged(section, Tracked_Waves):
                 continue
             else:
-                Waves.append(section)
+                Tracked_Waves.append(section)
         
-        # draw detection boxes on original frame and write out
-        original_frame = draw(Waves, original_frame, 1/mwt_preprocessing.RESIZE_FACTOR)
+        # draw detect boxes on original frame for visualization and write out
+        original_frame = draw(Tracked_Waves, 
+                              original_frame, 
+                              1/mwt_preprocessing.RESIZE_FACTOR)
     
         # write frame to video
         out.write(original_frame)
-
-        # store wave stats to log
-        for wave in Waves:
-            log.append((frame_num, wave.name, wave.mass, wave.displacement, 
-                        wave.birth, wave.death, wave.is_wave, wave.centroid))
 
         # increment frame count
         frame_num += 1
@@ -186,6 +209,10 @@ def analyze(video, log):
 
     # clean-up
     out.release()
+
+    # debug
+    for wave in Dead_Waves:
+        print wave.name
     
 
 def main(argv):
