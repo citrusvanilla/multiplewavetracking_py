@@ -60,13 +60,14 @@ def will_be_merged(section, list_of_waves):
     return going_to_be_merged
 
 
-def track(list_of_waves, frame, frame_number):
+def track(list_of_waves, frame, frame_number, last_frame):
     """tracking routine performed by updating Wave attributes.
 
     Args:
       list_of_waves: a list of waves to track
       frame: a frame from a cv2.video_reader object
       frame_number: number of the frame in a sequence
+      last_frame: 
 
     Returns:
       NONE: updates Section attributes
@@ -81,6 +82,10 @@ def track(list_of_waves, frame, frame_number):
         
         # check if wave has died
         mwt_objects.update_death(wave, frame_number)
+
+        # kill all waves if last frame in a video
+        if frame_number == last_frame:
+            wave.death = frame_number
 
         # update centroid
         mwt_objects.update_centroid(wave)
