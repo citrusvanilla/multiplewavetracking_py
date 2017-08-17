@@ -17,9 +17,6 @@ Method for recognition is:
 
 from __future__ import division
 
-import math
-
-import cv2
 import numpy as np
 
 import mwt_objects
@@ -48,12 +45,12 @@ def will_be_merged(section, list_of_waves):
     delta_y_left = np.round(section.centroid[0]
                             * np.tan(np.deg2rad(section.axis_angle)))
     left_y = int(section.centroid[1] + delta_y_left)
-    
+
     # For each existing wave, see if the section's axis falls in
     # another wave's search region.
     for wave in list_of_waves:
-        if left_y >= wave.searchROI_coors[0][1] \
-           and left_y <= wave.searchROI_coors[3][1]:
+        if left_y >= wave.searchroi_coors[0][1] \
+           and left_y <= wave.searchroi_coors[3][1]:
             going_to_be_merged = True
             break
 
@@ -76,12 +73,12 @@ def track(list_of_waves, frame, frame_number, last_frame):
     """
     for wave in list_of_waves:
 
-        # Update search ROI for tracking waves and merging waves.
-        mwt_objects.update_searchROI_coors(wave)
+        # Update search roi for tracking waves and merging waves.
+        mwt_objects.update_searchroi_coors(wave)
 
-        # Capture all non-zero points in the new ROI.
+        # Capture all non-zero points in the new roi.
         mwt_objects.update_points(wave, frame)
-        
+
         # Check if wave has died.
         mwt_objects.update_death(wave, frame_number)
 
@@ -106,4 +103,3 @@ def track(list_of_waves, frame, frame_number, last_frame):
 
         # Check masses and dynamics conditionals.
         mwt_objects.update_is_wave(wave)
-

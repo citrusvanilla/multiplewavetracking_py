@@ -11,7 +11,7 @@
 
  Method of preprocessing is:
  -1. resize image
- -2. extract foreground 
+ -2. extract foreground
  -3. denoise image
 """
 
@@ -20,10 +20,10 @@ from __future__ import division
 import cv2
 
 # Resize factor (downsize) for analysis:
-RESIZE_FACTOR = 0.25   
+RESIZE_FACTOR = 0.25
 
-# Number of frames that constitute the background history:   
-BACKGROUND_HISTORY = 300 
+# Number of frames that constitute the background history:
+BACKGROUND_HISTORY = 300
 
 # Number of gaussians in BG mixture model:
 NUM_GAUSSIANS = 5
@@ -31,7 +31,7 @@ NUM_GAUSSIANS = 5
 # Minimum percent of frame considered background:
 BACKGROUND_RATIO = 0.7
 
-# Morphological kernel size (square):    
+# Morphological kernel size (square):
 MORPH_KERN_SIZE = 5
 
 # Init the background modeling and foreground extraction mask.
@@ -43,7 +43,7 @@ mask = cv2.bgsegm.createBackgroundSubtractorMOG(
 
 # Init the morphological transformations for denoising kernel.
 kernel = cv2.getStructuringElement(cv2.MORPH_RECT,
-                                   (MORPH_KERN_SIZE,MORPH_KERN_SIZE))
+                                   (MORPH_KERN_SIZE, MORPH_KERN_SIZE))
 
 
 def _resize(frame):
@@ -64,7 +64,7 @@ def _resize(frame):
     return resized_frame
 
 
-def preprocess(input):
+def preprocess(frame):
     """Preprocesses video frames through resizing, background
     modeling, and denoising.
 
@@ -76,7 +76,7 @@ def preprocess(input):
     """
 
     # 1. Resize the input.
-    output = _resize(input)
+    output = _resize(frame)
 
     # 2. Model the background and extract the foreground with a mask.
     output = mask.apply(output)
@@ -85,7 +85,3 @@ def preprocess(input):
     output = cv2.morphologyEx(output, cv2.MORPH_OPEN, kernel)
 
     return output
-
-
-
-

@@ -18,10 +18,8 @@ Method for detecting is:
 from __future__ import division
 
 import math
-from collections import deque
 
 import cv2
-import numpy as np
 
 from mwt_objects import Section
 
@@ -61,12 +59,12 @@ def find_contours(frame):
 
 
 def filter_contour(contour,
-                   area=FLAGS_FILTER_BY_AREA, 
+                   area=FLAGS_FILTER_BY_AREA,
                    inertia=FLAGS_FILTER_BY_INERTIA,
-                   minArea=MINIMUM_AREA,
-                   maxArea=MAXIMUM_AREA,
-                   minInertiaRatio=MINIMUM_INERTIA_RATIO,
-                   maxInertiaRatio=MAXIMUM_INERTIA_RATIO):
+                   min_area=MINIMUM_AREA,
+                   max_area=MAXIMUM_AREA,
+                   min_inertia_ratio=MINIMUM_INERTIA_RATIO,
+                   max_inertia_ratio=MAXIMUM_INERTIA_RATIO):
     """Contour filtering function utilizing OpenCV.  In our case,
     we are looking for oblong shapes that exceed a user-defined area.
 
@@ -74,10 +72,10 @@ def filter_contour(contour,
       contour: A contour from an array of contours
       area: boolean flag to filter contour by area
       inertia: boolean flag to filter contour by inertia
-      minArea: minimum area threshold for contour
-      maxArea: maximum area threshold for contour
-      minInertiaRatio: minimum inertia threshold for contour
-      maxInertiaRatio: maximum inertia threshold for contour
+      min_area: minimum area threshold for contour
+      max_area: maximum area threshold for contour
+      min_inertia_ratio: minimum inertia threshold for contour
+      max_inertia_ratio: maximum inertia threshold for contour
 
     Returns:
       ret: A boolean TRUE if contour meets conditions, else FALSE
@@ -91,33 +89,33 @@ def filter_contour(contour,
     # Filter Contours By Area.
     if area is True and ret is True:
         area = cv2.contourArea(contour)
-        if area < minArea or area >= maxArea:
+        if area < min_area or area >= max_area:
             ret = False
 
     # Filter contours by inertia.
     if inertia is True and ret is True:
-        denominator = (math.sqrt((2*moments['m11'])**2 
-                       + (moments['m20']-moments['m02'])**2))
+        denominator = math.sqrt((2*moments['m11'])**2
+                                + (moments['m20']-moments['m02'])**2)
         epsilon = 0.01
         ratio = 0.0
 
         if denominator > epsilon:
-            cosmin = (moments['m20']-moments['m02']) / denominator;
-            sinmin = 2*moments['m11'] / denominator;
-            cosmax = -cosmin;
-            sinmax = -sinmin;
-                
-            imin = (0.5*(moments['m20']+moments['m02']) 
-                    - 0.5*(moments['m20']-moments['m02'])*cosmin 
-                    - moments['m11']*sinmin)
-            imax = (0.5*(moments['m20']+moments['m02']) 
-                    - 0.5*(moments['m20']-moments['m02'])*cosmax 
-                    - moments['m11']*sinmax)
-            ratio = imin / imax;
-        else:
-            ratio = 1;  
+            cosmin = (moments['m20']-moments['m02']) / denominator
+            sinmin = 2*moments['m11'] / denominator
+            cosmax = -cosmin
+            sinmax = -sinmin
 
-        if ratio < minInertiaRatio or ratio >= maxInertiaRatio:
+            imin = (0.5*(moments['m20']+moments['m02'])
+                    - 0.5*(moments['m20']-moments['m02'])*cosmin
+                    - moments['m11']*sinmin)
+            imax = (0.5*(moments['m20']+moments['m02'])
+                    - 0.5*(moments['m20']-moments['m02'])*cosmax
+                    - moments['m11']*sinmax)
+            ratio = imin / imax
+        else:
+            ratio = 1
+
+        if ratio < min_inertia_ratio or ratio >= max_inertia_ratio:
             ret = False
             #center.confidence = ratio * ratio;
 
@@ -136,7 +134,7 @@ def detect_sections(frame, frame_number):
 
     Returns:
       sections: a list of Section objects
-    """    
+    """
     # Convert to single channel for blob detection if necessary.
     if len(frame.shape) > 2:
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
@@ -149,10 +147,10 @@ def detect_sections(frame, frame_number):
 
     # 2. Filter the contours.
     for contour in contours:
-        
+
         if filter_contour(contour) is False:
             continue
-        
+
         # If contour passes thresholds, convert it to a Section.
         section = Section(points=contour, birth=frame_number)
 

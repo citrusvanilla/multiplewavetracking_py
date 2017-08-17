@@ -18,7 +18,7 @@ import cv2
 import numpy as np
 
 # Pixel height to buffer a sections's search region for other sections:
-SEARCH_REGION_BUFFER = 15           
+SEARCH_REGION_BUFFER = 15
 # Length of Deque to keep track of displacement of the wave.
 TRACKING_HISTORY = 300
 
@@ -28,7 +28,7 @@ ANALYSIS_FRAME_WIDTH = 320
 ANALYSIS_FRAME_HEIGHT = 180
 
 # The minimum orthogonal displacement to be considered an actual wave:
-DISPLACEMENT_THRESHOLD = 10         
+DISPLACEMENT_THRESHOLD = 10
 # The minimum mass to be considered an actual wave:
 MASS_THRESHOLD = 1000
 
@@ -39,46 +39,47 @@ GLOBAL_WAVE_AXIS = 5.0
 NAME_SEED = 0
 
 
-class Section():
+class Section(object):
     """Filtered contours become "sections" with the following
     attributes. Dynamic attributes are updated in each frame through
     tracking routine.
     """
+    # pylint: disable=too-many-instance-attributes
     def __init__(self, points, birth):
-        self.name = _generate_name()    
-        self.points = points 
+        self.name = _generate_name()
+        self.points = points
         self.birth = birth
-        self.axis_angle = GLOBAL_WAVE_AXIS 
+        self.axis_angle = GLOBAL_WAVE_AXIS
         self.centroid = _get_centroid(self.points)
-        self.original_axis = _get_standard_form_line(self.centroid, 
+        self.original_axis = _get_standard_form_line(self.centroid,
                                                      self.axis_angle)
-        self.searchROI_coors = _get_searchROI_coors(self.centroid, 
-                                                    self.axis_angle, 
+        self.searchroi_coors = _get_searchroi_coors(self.centroid,
+                                                    self.axis_angle,
                                                     SEARCH_REGION_BUFFER,
                                                     ANALYSIS_FRAME_WIDTH)
         self.boundingbox_coors = np.int0(cv2.boxPoints(
                                             cv2.minAreaRect(points)))
         self.displacement = 0
         self.max_displacement = self.displacement
-        self.displacement_vec = deque([self.displacement], 
-                                      maxlen = TRACKING_HISTORY)
+        self.displacement_vec = deque([self.displacement],
+                                      maxlen=TRACKING_HISTORY)
         self.mass = len(self.points)
         self.max_mass = self.mass
         self.is_wave = False
         self.death = None
-        
+
 
 ## ====================================================================
 
 
 def _get_standard_form_line(point, angle_from_horizon):
     """A function returning a 3-element array corresponding to
-    coefficients of the standard form for a line of Ax+By=C.  
+    coefficients of the standard form for a line of Ax+By=C.
     Requires one point in [x,y], and a counterclockwise angle from the
     horizion in degrees.
 
     Args:
-      point: a two-element array in [x,y] representing a point 
+      point: a two-element array in [x,y] representing a point
       angle_from_horizon: a float representing counterclockwise angle
                           from horizon of the line
 
@@ -108,27 +109,27 @@ def _get_centroid(points):
     centroid = None
 
     if points is not None:
-        centroid = [int(sum([p[0][0] for p in points]) / len(points)), 
+        centroid = [int(sum([p[0][0] for p in points]) / len(points)),
                     int(sum([p[0][1] for p in points]) / len(points))]
 
     return centroid
 
 
-def _get_searchROI_coors(centroid, axis_angle, searchROI_buffer, frame_width):
+def _get_searchroi_coors(centroid, axis_angle, searchroi_buffer, frame_width):
     """ Helper function for returning the four coordinates of a
     polygonal search region- a region in which we would want to merge
     several independent wave objects into one wave object because they
-    are indeed one wave.  Creates a buffer based on searchROI_buffer
+    are indeed one wave.  Creates a buffer based on searchroi_buffer
     and the polygon (wave) axis angle.
 
     Args:
       centroid: a two-element array representing center of mass of
                 a wave
-      axis_angle: counterclosewise angle from horizon of a wave's 
-                  axis 
-      searchROI_buffer: a buffer, in pixels, in which to generate 
+      axis_angle: counterclosewise angle from horizon of a wave's
+                  axis
+      searchroi_buffer: a buffer, in pixels, in which to generate
                         a search region buffer
-      frame_width: the width of the frame, to establish left and 
+      frame_width: the width of the frame, to establish left and
                    right bounds of a polygon
 
     Returns:
@@ -137,26 +138,29 @@ def _get_searchROI_coors(centroid, axis_angle, searchROI_buffer, frame_width):
                      coordinates of a search region polygon
 
     """
-    polygon_coors = [[None,None],[None,None],[None,None],[None,None]]
+    polygon_coors = [[None, None],
+                     [None, None],
+                     [None, None],
+                     [None, None]]
 
     delta_y_left = np.round(centroid[0] * np.tan(np.deg2rad(axis_angle)))
     delta_y_right = np.round((frame_width - centroid[0])
                              * np.tan(np.deg2rad(axis_angle)))
 
-    upper_left_y = int(centroid[1] + delta_y_left - searchROI_buffer)
+    upper_left_y = int(centroid[1] + delta_y_left - searchroi_buffer)
     upper_left_x = 0
-    upper_right_y = int(centroid[1] - delta_y_right - searchROI_buffer)
+    upper_right_y = int(centroid[1] - delta_y_right - searchroi_buffer)
     upper_right_x = frame_width
 
-    lower_left_y = int(centroid[1] + delta_y_left + searchROI_buffer)
+    lower_left_y = int(centroid[1] + delta_y_left + searchroi_buffer)
     lower_left_x = 0
-    lower_right_y = int(centroid[1] - delta_y_right + searchROI_buffer)
+    lower_right_y = int(centroid[1] - delta_y_right + searchroi_buffer)
     lower_right_x = frame_width
 
-    polygon_coors = [[upper_left_x,upper_left_y],
-                     [upper_right_x,upper_right_y],
-                     [lower_right_x,lower_right_y],
-                     [lower_left_x,lower_left_y]]
+    polygon_coors = [[upper_left_x, upper_left_y],
+                     [upper_right_x, upper_right_y],
+                     [lower_right_x, lower_right_y],
+                     [lower_left_x, lower_left_y]]
 
     return polygon_coors
 
@@ -178,26 +182,26 @@ def _generate_name():
     return NAME_SEED
 
 
-def update_searchROI_coors(wave):
-    """Function that adjusts the search ROI for tracking a wave in
+def update_searchroi_coors(wave):
+    """Function that adjusts the search roi for tracking a wave in
     future Frames.
 
     Args:
       wave: a wave object
 
     Returns:
-      NONE: updates the wave.searchROI_coors attribute
+      NONE: updates the wave.searchroi_coors attribute
     """
-    wave.searchROI_coors = _get_searchROI_coors(wave.centroid, 
-                                                wave.axis_angle, 
-                                                SEARCH_REGION_BUFFER, 
+    wave.searchroi_coors = _get_searchroi_coors(wave.centroid,
+                                                wave.axis_angle,
+                                                SEARCH_REGION_BUFFER,
                                                 ANALYSIS_FRAME_WIDTH)
 
 
 def update_points(wave, frame):
-    """Captures all positive pixels the search ROI based on measurement
+    """Captures all positive pixels the search roi based on measurement
     of the wave's position in the previous frame by using a mask.
-    
+
     Docs:
       https://stackoverflow.com/questions/17437846/
       https://stackoverflow.com/questions/10469235/
@@ -212,30 +216,30 @@ def update_points(wave, frame):
               attribute
     """
     points = None
-    
+
     # make a polygon object of the wave's search region
-    rect = wave.searchROI_coors
+    rect = wave.searchroi_coors
     poly = np.array([rect], dtype=np.int32)
 
-    # make a zero valued image on which to overlay the ROI polygon
+    # make a zero valued image on which to overlay the roi polygon
     img = np.zeros((ANALYSIS_FRAME_HEIGHT, ANALYSIS_FRAME_WIDTH), np.uint8)
-    
-    # fill the polygon ROI in the zero-value image with ones
+
+    # fill the polygon roi in the zero-value image with ones
     img = cv2.fillPoly(img, poly, 255)
-    
+
     # bitwise AND with the actual image to obtain a "masked" image
-    res = cv2.bitwise_and(frame, frame, mask=img) 
-    
-    # all points in the ROI are now expressed with ones
+    res = cv2.bitwise_and(frame, frame, mask=img)
+
+    # all points in the roi are now expressed with ones
     points = cv2.findNonZero(res)
-    
+
     # update points
     wave.points = points
 
 
 def update_death(wave, frame_number):
     """Checks to see if wave has died, which occurs when no pixels are
-    found in the wave's search ROI.  "None" indicates wave is alive,
+    found in the wave's search roi.  "None" indicates wave is alive,
     while an integer represents the frame number of death.
 
     Args:
@@ -278,17 +282,18 @@ def update_boundingbox_coors(wave):
 
     if wave.points is not None:
         # Obtain the moments of the object from its points array.
-        x = [p[0][0] for p in wave.points]
-        y = [p[0][1] for p in wave.points]
-        mean_x = np.mean(x)
-        mean_y = np.mean(y)
-        std_x = np.std(x)
-        std_y = np.std(y)
+        X = [p[0][0] for p in wave.points]
+        Y = [p[0][1] for p in wave.points]
+        mean_x = np.mean(X)
+        mean_y = np.mean(Y)
+        std_x = np.std(X)
+        std_y = np.std(Y)
 
         # We only capture points without outliers for display purposes.
         points_without_outliers = np.array(
-            [p[0] for p in wave.points if np.abs(p[0][0]-mean_x) < 3*std_x
-                                      and np.abs(p[0][1]-mean_y) < 3*std_y])
+                                    [p[0] for p in wave.points
+                                     if np.abs(p[0][0]-mean_x) < 3*std_x
+                                     and np.abs(p[0][1]-mean_y) < 3*std_y])
 
         rect = cv2.minAreaRect(points_without_outliers)
         box = cv2.boxPoints(rect)
@@ -322,7 +327,7 @@ def update_displacement(wave):
         # Calculate orthogonal distance from current postion to
         # original axis.
         ortho_disp = np.abs(a*x0 + b*y0 + c) / math.sqrt(a**2 + b**2)
-        
+
         wave.displacement = int(ortho_disp)
 
         # Update max displacement of the wave if necessary.
@@ -344,7 +349,7 @@ def update_displacement_vec(wave):
 
 def update_mass(wave):
     """Calculates mass of the wave by weighting each pixel in a search
-    ROI equally and performing a simple count.  Updates max_mass
+    roi equally and performing a simple count.  Updates max_mass
     attribute if necessary.
 
     Args:
@@ -354,7 +359,7 @@ def update_mass(wave):
       NONE: updates wave.mass and wave.max_mass attributes
     """
     mass = 0
-    
+
     if wave.points is not None:
         # Update instantaneous mass of the wave.
         mass = len(wave.points)
