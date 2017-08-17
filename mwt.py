@@ -25,7 +25,6 @@ Please see the README for how to compile the program and run the model.
 from __future__ import division
 
 import sys
-import os
 import getopt
 import time
 
@@ -62,50 +61,25 @@ def status_update(frame_number, tot_frames):
         sys.stdout.write(".")
         sys.stdout.flush()
 
-
-def draw(waves, frame, resize_factor):
-    """Simple function to draw bounding boxes on a frame for output.
-
-    Args:
-      waves: list of waves
-      frame: frame on which to draw waves
-      resize_factor: factor to resize boundingbox coors to match output
-                     frame.
-
-    Returns:
-      frame: input frame with waves drawn on top
-    """
-    # Draw detection boxes on original frame and write out.
-    for wave in waves:
-
-        if wave.death is None:
-            # Get boundingbox coors from wave objects.
-            rect = wave.boundingbox_coors
-
-            # Resize (upsize) for output.
-            rect[:] = [resize_factor*rect[i] for i in range(4)]
-
-            # If wave is not yet a wave, draw yellow, else green.
-            if wave.is_wave is False:
-                frame = cv2.drawContours(frame, [rect], 0, (0, 255, 255), 2)
-            else:
-                frame = cv2.drawContours(frame, [rect], 0, (0, 255, 0), 2)
-
-    return frame
+    if frame_number == tot_frames:
+        print "End of video reached successfully."
 
 
-def analyze(video):
+
+def analyze(video, write_output=True):
     """Main routine for analyzing nearshore wave videos. Overlays
     detected waves onto orginal frames and writes to a new video.
     Returns a log with detected wave attrbutes, frame by frame.
 
     Args:
       video: mp4 video
+      write_output: boolean indicating if a video with tracking overlay
+                    is to be written out.
 
     Returns:
-      recognized_waves:
-      wave_log:
-      time_elapsed:
+      recognized_waves: list of recognized wave objects
+      wave_log: list of list of wave attributes for csv
+      time_elapsed: performance of the program in frames/second
     """
     # Initiate an empty list of tracked waves, ultimately recognized
     # waves, and a log of all tracked waves in each frame.
@@ -117,23 +91,9 @@ def analyze(video):
     frame_num = 1
     num_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    # Grab some video stats for videowriter object.
-    original_width = video.get(cv2.CAP_PROP_FRAME_WIDTH)
-    original_height = video.get(cv2.CAP_PROP_FRAME_HEIGHT)
-    fps = video.get(cv2.CAP_PROP_FPS)
-
-    # Initiate video writer object by defining the codec and initiating
-    # the VideoWriter object.
-    # Make an output directory if necessary.
-    if not os.path.exists(mwt_io.OUTPUT_DIR):
-        os.mkdir(mwt_io.OUTPUT_DIR)
-    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-    output_path = os.path.join(mwt_io.OUTPUT_DIR, mwt_io.TRACKED_WAVE_FILE)
-    out = cv2.VideoWriter(output_path,
-                          fourcc,
-                          fps,
-                          (int(original_width), int(original_height)),
-                          isColor=True)
+    # If an output video is to be made:
+    if write_output is True:
+        out = mwt_io.create_video_writer(video)
 
     # Initiate a timer for program performance:
     time_start = time.time()
@@ -147,10 +107,6 @@ def analyze(video):
         # Read frames until end of clip.
         successful_read, original_frame = video.read()
         if not successful_read:
-            if frame_num < num_frames:
-                print "Did not reach end of video successfully."
-            else:
-                print "End of video reached."
             break
 
         # Preprocess frames.
@@ -170,7 +126,8 @@ def analyze(video):
         for wave in tracked_waves:
             wave_log.append((frame_num, wave.name, wave.mass, wave.max_mass,
                              wave.displacement, wave.max_displacement,
-                             wave.birth, wave.death, wave.is_wave, wave.centroid))
+                             wave.birth, wave.death, wave.is_wave,
+                             wave.centroid))
 
         # Remove dead waves from tracked_waves.
         for wave in tracked_waves:
@@ -198,13 +155,15 @@ def analyze(video):
             else:
                 tracked_waves.append(section)
 
-        # Draw detection boxes on original frame for visualization.
-        original_frame = draw(tracked_waves,
-                              original_frame,
-                              1/mwt_preprocessing.RESIZE_FACTOR)
+        if write_output is True:
+            # Draw detection boxes on original frame for visualization.
+            original_frame = mwt_io.draw(
+                                tracked_waves,
+                                original_frame,
+                                1/mwt_preprocessing.RESIZE_FACTOR)
 
-        # Write frame to output video.
-        out.write(original_frame)
+            # Write frame to output video.
+            out.write(original_frame)
 
         # Increment the frame count.
         frame_num += 1
@@ -226,7 +185,8 @@ def analyze(video):
         print "No waves recognized."
 
     # Clean-up resources.
-    out.release()
+    if write_output is True:
+        out.release()
 
     return recognized_waves, wave_log, performance
 
@@ -253,9 +213,10 @@ def main(argv):
     if not inputvideo.isOpened():
         sys.exit("Could not open video.")
 
-    # Initialize a wave_log list, recognized_wave list, and analyze.
-    # Keep time for program speed evaluation.
-    recognized_waves, wave_log, program_speed = analyze(inputvideo)
+    # Get a wave log, list of recognized waves, and program performance
+    # from analyze, as well as create a visualization video.
+    recognized_waves, wave_log, program_speed = analyze(inputvideo,
+                                                        write_output=False)
 
     # Write the wave log to csv.
     mwt_io.write_log_to_csv(wave_log)
