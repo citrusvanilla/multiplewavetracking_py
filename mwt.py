@@ -2,7 +2,7 @@
 ##  Near-shore Wave Tracking
 ##  mwt.py
 ##
-##  Created by Justin Fung on 8/1/17.
+##  Created by Justin Fung on 9/1/17.
 ##  Copyright 2017 justin fung. All rights reserved.
 ##
 ## ========================================================
@@ -126,7 +126,7 @@ def analyze(video, write_output=True):
         for wave in tracked_waves:
             wave_log.append((frame_num, wave.name, wave.mass, wave.max_mass,
                              wave.displacement, wave.max_displacement,
-                             wave.birth, wave.death, wave.is_wave,
+                             wave.birth, wave.death, wave.recognized,
                              wave.centroid))
 
         # Remove dead waves from tracked_waves.
@@ -134,7 +134,7 @@ def analyze(video, write_output=True):
             # Remove dead waves.
             if wave.death is not None:
                 # If wave became actual wave, add to recognized_waves.
-                if wave.is_wave is True:
+                if wave.recognized is True:
                     recognized_waves.append(wave)
                 # Regardless, remove the wave.
                 tracked_waves.remove(wave)
@@ -216,7 +216,7 @@ def main(argv):
     # Get a wave log, list of recognized waves, and program performance
     # from analyze, as well as create a visualization video.
     recognized_waves, wave_log, program_speed = analyze(inputvideo,
-                                                        write_output=False)
+                                                        write_output=True)
 
     # Write the wave log to csv.
     mwt_io.write_log_to_csv(wave_log)

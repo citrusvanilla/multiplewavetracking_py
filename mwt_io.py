@@ -2,7 +2,7 @@
 ##  Near-shore Wave Tracking
 ##  mwt_io.py
 ##
-##  Created by Justin Fung on 8/1/17.
+##  Created by Justin Fung on 9/1/17.
 ##  Copyright 2017 justin fung. All rights reserved.
 ##
 ## ========================================================
@@ -19,6 +19,8 @@ import cv2
 
 # We are going to dump our output in a folder in the same directory.
 OUTPUT_DIR = "output"
+
+# Names of output files to be written to output/ go here:
 WAVE_LOG_FILE = "wave_log.csv"
 RECOGNIZED_WAVE_REPORT_FILE = "recognized_waves.txt"
 TRACKED_WAVE_FILE = "tracked_waves.mp4"
@@ -82,7 +84,7 @@ def write_log_to_csv(log):
     # Declare headers here.
     log_headers = ["frame_num", "wave_id", "inst_mass", "max_mass",
                    "inst_displacement", "max_displacement",
-                   "frame_birth", "frame_death", "is_wave", "centroid"]
+                   "frame_birth", "frame_death", "recognized", "centroid"]
 
     # Make an output directory if necessary.
     if not os.path.exists(OUTPUT_DIR):
@@ -156,7 +158,7 @@ def draw(waves, frame, resize_factor):
             rect[:] = [resize_factor*rect[i] for i in range(4)]
 
             # If wave is not yet a wave, draw yellow, else green.
-            if wave.is_wave is False:
+            if wave.recognized is False:
                 frame = cv2.drawContours(frame, [rect], 0, (0, 255, 255), 2)
             else:
                 frame = cv2.drawContours(frame, [rect], 0, (0, 255, 0), 2)

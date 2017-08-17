@@ -2,7 +2,7 @@
 ##  Near-shore Wave Tracking
 ##  mwt_detection.py
 ##
-##  Created by Justin Fung on 8/1/17.
+##  Created by Justin Fung on 9/1/17.
 ##  Copyright 2017 justin fung. All rights reserved.
 ##
 ## ========================================================
@@ -58,13 +58,13 @@ def find_contours(frame):
     return contours
 
 
-def filter_contour(contour,
-                   area=FLAGS_FILTER_BY_AREA,
-                   inertia=FLAGS_FILTER_BY_INERTIA,
-                   min_area=MINIMUM_AREA,
-                   max_area=MAXIMUM_AREA,
-                   min_inertia_ratio=MINIMUM_INERTIA_RATIO,
-                   max_inertia_ratio=MAXIMUM_INERTIA_RATIO):
+def keep_contour(contour,
+                 area=FLAGS_FILTER_BY_AREA,
+                 inertia=FLAGS_FILTER_BY_INERTIA,
+                 min_area=MINIMUM_AREA,
+                 max_area=MAXIMUM_AREA,
+                 min_inertia_ratio=MINIMUM_INERTIA_RATIO,
+                 max_inertia_ratio=MAXIMUM_INERTIA_RATIO):
     """Contour filtering function utilizing OpenCV.  In our case,
     we are looking for oblong shapes that exceed a user-defined area.
 
@@ -148,7 +148,7 @@ def detect_sections(frame, frame_number):
     # 2. Filter the contours.
     for contour in contours:
 
-        if filter_contour(contour) is False:
+        if keep_contour(contour) is False:
             continue
 
         # If contour passes thresholds, convert it to a Section.

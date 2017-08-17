@@ -2,7 +2,7 @@
 ##  Near-shore Wave Tracking
 ##  mwt_tracking.py
 ##
-##  Created by Justin Fung on 8/1/17.
+##  Created by Justin Fung on 9/1/17.
 ##  Copyright 2017 justin fung. All rights reserved.
 ##
 ## ====================================================================
@@ -74,32 +74,29 @@ def track(list_of_waves, frame, frame_number, last_frame):
     for wave in list_of_waves:
 
         # Update search roi for tracking waves and merging waves.
-        mwt_objects.update_searchroi_coors(wave)
+        wave.update_searchroi_coors()
 
         # Capture all non-zero points in the new roi.
-        mwt_objects.update_points(wave, frame)
+        wave.update_points(frame)
 
         # Check if wave has died.
-        mwt_objects.update_death(wave, frame_number)
+        wave.update_death(frame_number)
 
         # Kill all waves if it is the last frame in the video.
         if frame_number == last_frame:
             wave.death = frame_number
 
         # Update centroids.
-        mwt_objects.update_centroid(wave)
+        wave.update_centroid()
 
         # Update bounding boxes for display.
-        mwt_objects.update_boundingbox_coors(wave)
+        wave.update_boundingbox_coors()
 
         # Update displacement vectors.
-        mwt_objects.update_displacement_vec(wave)
-
-        # Update absolute displacements.
-        mwt_objects.update_displacement(wave)
+        wave.update_displacement()
 
         # Update wave masses.
-        mwt_objects.update_mass(wave)
+        wave.update_mass()
 
         # Check masses and dynamics conditionals.
-        mwt_objects.update_is_wave(wave)
+        wave.update_recognized()

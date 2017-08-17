@@ -2,7 +2,7 @@
 ##  Near-shore Wave Tracking
 ##  mwt_objects.py
 ##
-##  Created by Justin Fung on 8/1/17.
+##  Created by Justin Fung on 9/1/17.
 ##  Copyright 2017 justin fung. All rights reserved.
 ##
 ## ====================================================================
@@ -65,11 +65,228 @@ class Section(object):
                                       maxlen=TRACKING_HISTORY)
         self.mass = len(self.points)
         self.max_mass = self.mass
-        self.is_wave = False
+        self.recognized = False
         self.death = None
 
 
+    def update_searchroi_coors(self):
+        """Method that adjusts the search roi for tracking a wave in
+        future Frames.
+
+        Args:
+          NONE:
+
+        Returns:
+          NONE: sets wave death to wave.death attribute
+        """
+        self.searchroi_coors = _get_searchroi_coors(self.centroid,
+                                                    self.axis_angle,
+                                                    SEARCH_REGION_BUFFER,
+                                                    ANALYSIS_FRAME_WIDTH)
+
+
+    def update_death(self, frame_number):
+        """Checks to see if wave has died, which occurs when no pixels
+        are found in the wave's search roi.  "None" indicates wave is
+        alive, while an integer represents the frame number of death.
+
+        Args:
+          frame_number: number of frame in a video sequence
+
+        Returns:
+          NONE: sets wave death to wave.death attribute
+        """
+        if self.points is None:
+            self.death = frame_number
+
+
+    def update_points(self, frame):
+        """Captures all positive pixels the search roi based on
+        measurement of the wave's position in the previous frame by
+        using a mask.
+
+        Docs:
+          https://stackoverflow.com/questions/17437846/
+          https://stackoverflow.com/questions/10469235/
+
+        Args:
+          frame: frame in which to obtain new binary representation of
+                 the wave
+
+        Returns:
+          NONE: returns all points as an array to the self.points
+                attribute
+        """
+        # make a polygon object of the wave's search region
+        rect = self.searchroi_coors
+        poly = np.array([rect], dtype=np.int32)
+
+        # make a zero valued image on which to overlay the roi polygon
+        img = np.zeros((ANALYSIS_FRAME_HEIGHT, ANALYSIS_FRAME_WIDTH),
+                       np.uint8)
+
+        # fill the polygon roi in the zero-value image with ones
+        img = cv2.fillPoly(img, poly, 255)
+
+        # bitwise AND with the actual image to obtain a "masked" image
+        res = cv2.bitwise_and(frame, frame, mask=img)
+
+        # all points in the roi are now expressed with ones
+        points = cv2.findNonZero(res)
+
+        # update points
+        self.points = points
+
+
+    def update_centroid(self):
+        """Calculates the center of mass of all positive pixels that
+        represent the wave, using first-order moments.
+        See _get_centroid.
+
+        Args:
+          NONE
+
+        Returns:
+          NONE: updates wave.centroid
+        """
+        self.centroid = _get_centroid(self.points)
+
+
+    def update_boundingbox_coors(self):
+        """Finds minimum area rectangle that bounds the points of the
+        wave. Returns four coordinates of the bounding box.  This is
+        primarily for visualization purposes.
+
+        Args:
+          NONE
+
+        Returns:
+          NONE: updates self.boundingbox_coors attribute
+        """
+        boundingbox_coors = None
+
+        if self.points is not None:
+            # Obtain the moments of the object from its points array.
+            X = [p[0][0] for p in self.points]
+            Y = [p[0][1] for p in self.points]
+            mean_x = np.mean(X)
+            mean_y = np.mean(Y)
+            std_x = np.std(X)
+            std_y = np.std(Y)
+
+            # We only capture points without outliers for display
+            # purposes.
+            points_without_outliers = np.array(
+                                       [p[0] for p in self.points
+                                        if np.abs(p[0][0]-mean_x) < 3*std_x
+                                        and np.abs(p[0][1]-mean_y) < 3*std_y])
+
+            rect = cv2.minAreaRect(points_without_outliers)
+            box = cv2.boxPoints(rect)
+            boundingbox_coors = np.int0(box)
+
+        self.boundingbox_coors = boundingbox_coors
+
+
+    def update_displacement(self):
+        """Evaluates orthogonal displacement compared to original axis.
+        Updates self.max_displacement if necessary.  Appends new
+        displacement to deque.
+
+        Args:
+          NONE
+
+        Returns:
+          NONE: updates self.displacement and self.max_displacement
+                attributes
+        """
+        if self.centroid is not None:
+            self.displacement = _get_orthogonal_displacement(
+                                                        self.centroid,
+                                                        self.original_axis)
+
+        # Update max displacement of the wave if necessary.
+        if self.displacement > self.max_displacement:
+            self.max_displacement = self.displacement
+
+        # Update displacement vector
+        self.displacement_vec.append(self.displacement)
+
+
+    def update_mass(self):
+        """Calculates mass of the wave by weighting each pixel in a
+        search roi equally and performing a simple count.  Updates
+        self.max_mass attribute if necessary.
+
+        Args:
+          wave: a Section object
+
+        Returns:
+          NONE: updates self.mass and self.max_mass attributes
+        """
+        self.mass = _get_mass(self.points)
+
+        # Update max_mass for the wave if necessary.
+        if self.mass > self.max_mass:
+            self.max_mass = self.mass
+
+
+    def update_recognized(self):
+        """Updates the boolean self.recognized to True if wave mass and
+        wave displacement exceed user-defined thresholds.  Once a wave
+        is a wave, wave is not checked again.
+
+        Args:
+          wave: a wave object
+
+        Returns:
+          NONE: changes self.recognized boolean to True if conditions
+                are met.
+        """
+        if self.recognized is False:
+            if self.max_displacement >= DISPLACEMENT_THRESHOLD \
+               and self.max_mass >= MASS_THRESHOLD:
+                self.recognized = True
+
+
 ## ====================================================================
+
+
+def _get_mass(points):
+    """Simple function to calculate mass of an array of points with
+    equal weighting of the points.
+
+    Args:
+      points: an array of non-zero points
+
+    Returns:
+      mass:  "mass" of the points
+    """
+    mass = 0
+
+    if points is not None:
+        mass = len(points)
+
+    return mass
+
+
+def _get_orthogonal_displacement(point, standard_form_line):
+    ortho_disp = 0
+
+    # Retrieve standard form coefficients of original axis.
+    a = standard_form_line[0]
+    b = standard_form_line[1]
+    c = standard_form_line[2]
+
+    # Retrieve current location of the wave.
+    x0 = point[0]
+    y0 = point[1]
+
+    # Calculate orthogonal distance from current postion to
+    # original axis.
+    ortho_disp = np.abs(a*x0 + b*y0 + c) / math.sqrt(a**2 + b**2)
+
+    return int(ortho_disp)
 
 
 def _get_standard_form_line(point, angle_from_horizon):
@@ -180,209 +397,3 @@ def _generate_name():
     NAME_SEED += 1
 
     return NAME_SEED
-
-
-def update_searchroi_coors(wave):
-    """Function that adjusts the search roi for tracking a wave in
-    future Frames.
-
-    Args:
-      wave: a wave object
-
-    Returns:
-      NONE: updates the wave.searchroi_coors attribute
-    """
-    wave.searchroi_coors = _get_searchroi_coors(wave.centroid,
-                                                wave.axis_angle,
-                                                SEARCH_REGION_BUFFER,
-                                                ANALYSIS_FRAME_WIDTH)
-
-
-def update_points(wave, frame):
-    """Captures all positive pixels the search roi based on measurement
-    of the wave's position in the previous frame by using a mask.
-
-    Docs:
-      https://stackoverflow.com/questions/17437846/
-      https://stackoverflow.com/questions/10469235/
-
-    Args:
-      wave: a Section object
-      frame: frame in which to obtain new binary representation of the
-             wave
-
-    Returns:
-      points: returns all points as an array to the wave.points
-              attribute
-    """
-    points = None
-
-    # make a polygon object of the wave's search region
-    rect = wave.searchroi_coors
-    poly = np.array([rect], dtype=np.int32)
-
-    # make a zero valued image on which to overlay the roi polygon
-    img = np.zeros((ANALYSIS_FRAME_HEIGHT, ANALYSIS_FRAME_WIDTH), np.uint8)
-
-    # fill the polygon roi in the zero-value image with ones
-    img = cv2.fillPoly(img, poly, 255)
-
-    # bitwise AND with the actual image to obtain a "masked" image
-    res = cv2.bitwise_and(frame, frame, mask=img)
-
-    # all points in the roi are now expressed with ones
-    points = cv2.findNonZero(res)
-
-    # update points
-    wave.points = points
-
-
-def update_death(wave, frame_number):
-    """Checks to see if wave has died, which occurs when no pixels are
-    found in the wave's search roi.  "None" indicates wave is alive,
-    while an integer represents the frame number of death.
-
-    Args:
-      wave: a wave object
-      frame_number: number of frame in a video sequence
-
-    Returns:
-      NONE: sets wave death to wave.death attribute
-    """
-    if wave.points is None:
-        wave.death = frame_number
-
-
-def update_centroid(wave):
-    """Calculates the center of mass of all positive pixels that
-    represent the wave, using first-order moments.  See _get_centroid.
-
-    Args:
-      wave: a wave object
-
-    Returns:
-      NONE: updates wave.centroid
-    """
-    wave.centroid = _get_centroid(wave.points)
-
-
-def update_boundingbox_coors(wave):
-    """Finds minimum area rectangle that bounds the points of a wave.
-    Returns four coordinates of the bounding box.  This is primarily
-    for visualization purposes.
-
-    Args:
-      wave: a wave object
-
-    Returns:
-      NONE: updates wave.boundingbox_coors attribute
-    """
-
-    boundingbox_coors = None
-
-    if wave.points is not None:
-        # Obtain the moments of the object from its points array.
-        X = [p[0][0] for p in wave.points]
-        Y = [p[0][1] for p in wave.points]
-        mean_x = np.mean(X)
-        mean_y = np.mean(Y)
-        std_x = np.std(X)
-        std_y = np.std(Y)
-
-        # We only capture points without outliers for display purposes.
-        points_without_outliers = np.array(
-                                    [p[0] for p in wave.points
-                                     if np.abs(p[0][0]-mean_x) < 3*std_x
-                                     and np.abs(p[0][1]-mean_y) < 3*std_y])
-
-        rect = cv2.minAreaRect(points_without_outliers)
-        box = cv2.boxPoints(rect)
-        boundingbox_coors = np.int0(box)
-
-    wave.boundingbox_coors = boundingbox_coors
-
-
-def update_displacement(wave):
-    """Evaluates orthogonal displacement compared to original axis.
-    Updates max_displacement if necessary.
-
-    Args:
-      wave: a wave object
-
-    Returns:
-      NONE: updates wave.displacement and wave.max_displacement
-            attributes
-    """
-    # Update instantaneous displacement of the wave.
-    if wave.centroid is not None:
-        # Retrieve standard form coefficients of original axis.
-        a = wave.original_axis[0]
-        b = wave.original_axis[1]
-        c = wave.original_axis[2]
-
-        # Retrieve current location of the wave.
-        x0 = wave.centroid[0]
-        y0 = wave.centroid[1]
-
-        # Calculate orthogonal distance from current postion to
-        # original axis.
-        ortho_disp = np.abs(a*x0 + b*y0 + c) / math.sqrt(a**2 + b**2)
-
-        wave.displacement = int(ortho_disp)
-
-        # Update max displacement of the wave if necessary.
-        if wave.displacement > wave.max_displacement:
-            wave.max_displacement = wave.displacement
-
-
-def update_displacement_vec(wave):
-    """Appends displacement to a deque.
-
-    Args:
-      wave: a Section object
-
-    Returns:
-      NONE: append positional displacement to the queue.
-    """
-    wave.displacement_vec.append(wave.displacement)
-
-
-def update_mass(wave):
-    """Calculates mass of the wave by weighting each pixel in a search
-    roi equally and performing a simple count.  Updates max_mass
-    attribute if necessary.
-
-    Args:
-      wave: a Section object
-
-    Returns:
-      NONE: updates wave.mass and wave.max_mass attributes
-    """
-    mass = 0
-
-    if wave.points is not None:
-        # Update instantaneous mass of the wave.
-        mass = len(wave.points)
-
-    wave.mass = mass
-
-    # Update max_mass for the wave if necessary.
-    if wave.mass > wave.max_mass:
-        wave.max_mass = wave.mass
-
-
-def update_is_wave(wave):
-    """Updates the boolean wave.is_wave to True if wave mass and wave
-    displacement exceed user-defined thresholds.  Once a wave is a
-    wave, wave is not checked again.
-
-    Args:
-      wave: a wave object
-
-    Returns:
-      NONE: changes wave.is_wave boolean to True if conditions are met
-    """
-    if wave.is_wave is False:
-        if wave.max_displacement >= DISPLACEMENT_THRESHOLD \
-            and wave.max_mass >= MASS_THRESHOLD:
-            wave.is_wave = True
