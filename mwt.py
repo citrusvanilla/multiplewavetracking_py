@@ -65,7 +65,6 @@ def status_update(frame_number, tot_frames):
         print "End of video reached successfully."
 
 
-
 def analyze(video, write_output=True):
     """Main routine for analyzing nearshore wave videos. Overlays
     detected waves onto orginal frames and writes to a new video.
@@ -219,7 +218,7 @@ def main(argv):
                                                         write_output=True)
 
     # Write the wave log to csv.
-    mwt_io.write_log_to_csv(wave_log)
+    mwt_io.write_log(wave_log, output_format="json")
 
     # Write the analysis report to txt.
     mwt_io.write_report(recognized_waves, program_speed)

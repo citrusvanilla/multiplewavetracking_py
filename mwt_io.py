@@ -14,6 +14,7 @@ from __future__ import division
 
 import os
 import csv
+import json
 
 import cv2
 
@@ -21,7 +22,8 @@ import cv2
 OUTPUT_DIR = "output"
 
 # Names of output files to be written to output/ go here:
-WAVE_LOG_FILE = "wave_log.csv"
+WAVE_LOG_CSVFILE = "wave_log.csv"
+WAVE_LOG_JSONFILE = "wave_log.json"
 RECOGNIZED_WAVE_REPORT_FILE = "recognized_waves.txt"
 TRACKED_WAVE_FILE = "tracked_waves.mp4"
 
@@ -34,7 +36,7 @@ def create_video_writer(input_video):
     input video stats (frame width, height, fps) for tracking
     visualization.
 
-    Args: 
+    Args:
       input_video: video read into program using opencv methods
 
     Returns:
@@ -63,7 +65,7 @@ def create_video_writer(input_video):
     return out
 
 
-def write_log_to_csv(log):
+def write_log(log, output_format="csv"):
     """Takes a list of list of wave attributes representing each
     tracked wave's statistics in every frame of the video for which the
     wave was present.  Outputs each item in the list as a line to a
@@ -71,15 +73,19 @@ def write_log_to_csv(log):
 
     Args:
       log: a list of lists of wave statistics
+      format: either "csv" for CSV or "json" for JSON
 
     Returns:
-      NONE: writes the log to a csv file.
+      NONE: writes the log to a csv or json file.
     """
     # Print status update.
     if not log:
         print "No waves or sections detected.  No log written."
     else:
-        print "Writing wave log to", WAVE_LOG_FILE
+        if output_format == "csv":
+            print "Writing wave log to", WAVE_LOG_CSVFILE
+        elif output_format == "json":
+            print "Writing wave log to", WAVE_LOG_JSONFILE
 
     # Declare headers here.
     log_headers = ["frame_num", "wave_id", "inst_mass", "max_mass",
@@ -90,13 +96,30 @@ def write_log_to_csv(log):
     if not os.path.exists(OUTPUT_DIR):
         os.mkdir(OUTPUT_DIR)
 
-    # Using a context manager, write each item to a new row in the csv.
-    output_path = os.path.join(OUTPUT_DIR, WAVE_LOG_FILE)
-    with open(output_path, "wb") as csvfile:
-        writer = csv.writer(csvfile, delimiter=',')
-        writer.writerow(log_headers)
-        for row in log:
-            writer.writerow(row)
+    # Using a context manager, write each item to a new row in output.
+    if output_format == "csv":
+        output_path = os.path.join(OUTPUT_DIR, WAVE_LOG_CSVFILE)
+    elif output_format == "json":
+        output_path = os.path.join(OUTPUT_DIR, WAVE_LOG_JSONFILE)
+
+    with open(output_path, "wb") as outfile:
+        if output_format == "csv":
+            writer = csv.writer(outfile, delimiter=',')
+            writer.writerow(log_headers)
+            for row in log:
+                writer.writerow(row)
+        elif output_format == "json":
+            outfile.write('[')
+            for count, row in enumerate(log):
+                json_line = {}
+                for i, j in enumerate(log_headers):
+                    json_line[j] = row[i]
+                json.dump(json_line, outfile)
+                if count == len(log)-1:
+                    outfile.write('\n')
+                else:
+                    outfile.write(',\n')
+            outfile.write(']')
 
 
 def write_report(waves, performance):
