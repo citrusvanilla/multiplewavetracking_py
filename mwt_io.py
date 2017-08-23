@@ -159,7 +159,10 @@ def write_report(waves, performance):
 
 
 def draw(waves, frame, resize_factor):
-    """Simple function to draw bounding boxes on a frame for output.
+    """Simple function to draw on a frame for output.  Draws bounding
+    boxes in accordance with wave.boundingbox_coors attribute, and draws
+    some wave stats to accompany each potential wave, including whether
+    or not the object is actually a wave (i.e. wave.recognized == True).
 
     Args:
       waves: list of waves
@@ -170,20 +173,38 @@ def draw(waves, frame, resize_factor):
     Returns:
       frame: input frame with waves drawn on top
     """
-    # Draw detection boxes on original frame and write out.
+    # Iterate through a list of waves.
     for wave in waves:
-
         if wave.death is None:
-            # Get boundingbox coors from wave objects.
-            rect = wave.boundingbox_coors
-
-            # Resize (upsize) for output.
-            rect[:] = [resize_factor*rect[i] for i in range(4)]
-
-            # If wave is not yet a wave, draw yellow, else green.
-            if wave.recognized is False:
-                frame = cv2.drawContours(frame, [rect], 0, (0, 255, 255), 2)
+            # If wave is a wave, draw green, else yellow.
+            # Set wave text accordingly.
+            if wave.recognized is True:
+                drawing_color = (0, 255, 0)
+                text = ("Wave Detected!\nmass: {}\ndisplacement: {}"
+                        .format(wave.mass, wave.displacement))
             else:
-                frame = cv2.drawContours(frame, [rect], 0, (0, 255, 0), 2)
+                drawing_color = (0, 255, 255)
+                text = ("Potential Wave\nmass: {}\ndisplacement: {}"
+                        .format(wave.mass, wave.displacement))
+
+            # Draw Bounding Boxes:
+            # Get boundingbox coors from wave objects and resize.
+            rect = wave.boundingbox_coors
+            rect[:] = [resize_factor*rect[i] for i in range(4)]
+            frame = cv2.drawContours(frame, [rect], 0, drawing_color, 2)
+
+            # Draw wave stats on each wave.
+            for i, j in enumerate(text.split('\n')):
+                frame = cv2.putText(
+                                frame,
+                                text=j,
+                                org=(int(resize_factor*wave.centroid[0]),
+                                     int(resize_factor*wave.centroid[1])
+                                        +(50 + i*30)),
+                                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                                fontScale=1,
+                                color=drawing_color,
+                                thickness=2,
+                                lineType=cv2.LINE_AA)
 
     return frame

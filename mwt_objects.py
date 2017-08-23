@@ -74,10 +74,10 @@ class Section(object):
         future Frames.
 
         Args:
-          NONE:
+          NONE
 
         Returns:
-          NONE: sets wave death to wave.death attribute
+          NONE: updates self.searhroi_coors
         """
         self.searchroi_coors = _get_searchroi_coors(self.centroid,
                                                     self.axis_angle,
@@ -114,8 +114,8 @@ class Section(object):
                  the wave
 
         Returns:
-          NONE: returns all points as an array to the self.points
-                attribute
+          NONE: returns all positive points as an array to the 
+                self.points attribute
         """
         # make a polygon object of the wave's search region
         rect = self.searchroi_coors
@@ -234,7 +234,7 @@ class Section(object):
     def update_recognized(self):
         """Updates the boolean self.recognized to True if wave mass and
         wave displacement exceed user-defined thresholds.  Once a wave
-        is a wave, wave is not checked again.
+        is recognized, the wave is not checked again.
 
         Args:
           wave: a wave object
@@ -271,6 +271,16 @@ def _get_mass(points):
 
 
 def _get_orthogonal_displacement(point, standard_form_line):
+    """Helper function to calculate the orthogonal distance of a point
+    to a line.
+
+    Args:
+      point: 2-element array representing a point as [x,y]
+      standard_form_line: 3-element array representing a line in
+                          standard form coordinates as [A,B,C]
+    Returns:
+      ortho_disp: distance of point to line in pixels
+    """
     ortho_disp = 0
 
     # Retrieve standard form coefficients of original axis.
@@ -289,34 +299,33 @@ def _get_orthogonal_displacement(point, standard_form_line):
     return int(ortho_disp)
 
 
-def _get_standard_form_line(point, angle_from_horizon):
-    """A function returning a 3-element array corresponding to
+def _get_standard_form_line(point, angle):
+    """Helper function returning a 3-element array corresponding to
     coefficients of the standard form for a line of Ax+By=C.
     Requires one point in [x,y], and a counterclockwise angle from the
     horizion in degrees.
 
     Args:
       point: a two-element array in [x,y] representing a point
-      angle_from_horizon: a float representing counterclockwise angle
-                          from horizon of the line
+      angle: a float representing counterclockwise angle from horizon
+             of a line
 
     Returns:
       coefficients: a three-element array as [A,B,C]
     """
     coefficients = [None, None, None]
 
-    coefficients[0] = np.tan(np.deg2rad(-angle_from_horizon))
+    coefficients[0] = np.tan(np.deg2rad(-angle))
     coefficients[1] = -1
-    coefficients[2] = (point[1]
-                       - np.tan(np.deg2rad(-angle_from_horizon))
-                       * point[0])
+    coefficients[2] = (point[1] - np.tan(np.deg2rad(-angle))*point[0])
 
     return coefficients
 
 
 def _get_centroid(points):
-    """Function for getting the centroid of an object that is
-    represented by positive pixels in a bilevel image.
+    """Helper function for getting the x,y coordinates of the center of
+    mass of an object that is represented by positive pixels in a
+    bilevel image.
 
     Args:
       points: array of points
@@ -332,8 +341,8 @@ def _get_centroid(points):
     return centroid
 
 
-def _get_searchroi_coors(centroid, axis_angle, searchroi_buffer, frame_width):
-    """ Helper function for returning the four coordinates of a
+def _get_searchroi_coors(centroid, angle, searchroi_buffer, frame_width):
+    """Helper function for returning the four coordinates of a
     polygonal search region- a region in which we would want to merge
     several independent wave objects into one wave object because they
     are indeed one wave.  Creates a buffer based on searchroi_buffer
@@ -342,8 +351,7 @@ def _get_searchroi_coors(centroid, axis_angle, searchroi_buffer, frame_width):
     Args:
       centroid: a two-element array representing center of mass of
                 a wave
-      axis_angle: counterclosewise angle from horizon of a wave's
-                  axis
+      angle: counterclosewise angle from horizon of a wave's axis
       searchroi_buffer: a buffer, in pixels, in which to generate
                         a search region buffer
       frame_width: the width of the frame, to establish left and
@@ -360,9 +368,9 @@ def _get_searchroi_coors(centroid, axis_angle, searchroi_buffer, frame_width):
                      [None, None],
                      [None, None]]
 
-    delta_y_left = np.round(centroid[0] * np.tan(np.deg2rad(axis_angle)))
+    delta_y_left = np.round(centroid[0] * np.tan(np.deg2rad(angle)))
     delta_y_right = np.round((frame_width - centroid[0])
-                             * np.tan(np.deg2rad(axis_angle)))
+                             * np.tan(np.deg2rad(angle)))
 
     upper_left_y = int(centroid[1] + delta_y_left - searchroi_buffer)
     upper_left_x = 0
