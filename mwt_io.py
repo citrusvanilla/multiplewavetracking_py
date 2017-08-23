@@ -16,6 +16,7 @@ import os
 import csv
 import json
 
+import numpy as np
 import cv2
 
 # We are going to dump our output in a folder in the same directory.
@@ -193,18 +194,27 @@ def draw(waves, frame, resize_factor):
             rect[:] = [resize_factor*rect[i] for i in range(4)]
             frame = cv2.drawContours(frame, [rect], 0, drawing_color, 2)
 
+            # Use moving averages of wave centroid for stat locations
+            moving_x = np.mean([wave.centroid_vec[-k][0]
+                                for k
+                                in range(1, min(20, 1+len(wave.centroid_vec)))])
+            moving_y = np.mean([wave.centroid_vec[-k][1]
+                                for k
+                                in range(1, min(20, 1+len(wave.centroid_vec)))])
+
             # Draw wave stats on each wave.
-            for i, j in enumerate(text.split('\n')):
-                frame = cv2.putText(
-                                frame,
-                                text=j,
-                                org=(int(resize_factor*wave.centroid[0]),
-                                     int(resize_factor*wave.centroid[1])
-                                        +(50 + i*30)),
-                                fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                                fontScale=1,
-                                color=drawing_color,
-                                thickness=2,
-                                lineType=cv2.LINE_AA)
+            if len(wave.centroid_vec) > 20:
+                for i, j in enumerate(text.split('\n')):
+                    frame = cv2.putText(
+                                    frame,
+                                    text=j,
+                                    org=(int(resize_factor*moving_x),
+                                         int(resize_factor*moving_y)
+                                            +(50 + i*30)),
+                                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                                    fontScale=1,
+                                    color=drawing_color,
+                                    thickness=2,
+                                    lineType=cv2.LINE_AA)
 
     return frame

@@ -20,7 +20,7 @@ import numpy as np
 # Pixel height to buffer a sections's search region for other sections:
 SEARCH_REGION_BUFFER = 15
 # Length of Deque to keep track of displacement of the wave.
-TRACKING_HISTORY = 300
+TRACKING_HISTORY = 21
 
 # Width of frame in analysis steps (not original width):
 ANALYSIS_FRAME_WIDTH = 320
@@ -51,6 +51,8 @@ class Section(object):
         self.birth = birth
         self.axis_angle = GLOBAL_WAVE_AXIS
         self.centroid = _get_centroid(self.points)
+        self.centroid_vec = deque([self.centroid],
+                                  maxlen=TRACKING_HISTORY)
         self.original_axis = _get_standard_form_line(self.centroid,
                                                      self.axis_angle)
         self.searchroi_coors = _get_searchroi_coors(self.centroid,
@@ -114,7 +116,7 @@ class Section(object):
                  the wave
 
         Returns:
-          NONE: returns all positive points as an array to the 
+          NONE: returns all positive points as an array to the
                 self.points attribute
         """
         # make a polygon object of the wave's search region
@@ -150,6 +152,9 @@ class Section(object):
           NONE: updates wave.centroid
         """
         self.centroid = _get_centroid(self.points)
+
+        # Update centroid vector.
+        self.centroid_vec.append(self.centroid)
 
 
     def update_boundingbox_coors(self):
@@ -209,7 +214,7 @@ class Section(object):
         if self.displacement > self.max_displacement:
             self.max_displacement = self.displacement
 
-        # Update displacement vector
+        # Update displacement vector.
         self.displacement_vec.append(self.displacement)
 
 
