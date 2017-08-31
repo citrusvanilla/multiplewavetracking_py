@@ -175,7 +175,14 @@ def draw(waves, frame, resize_factor):
       frame: input frame with waves drawn on top
     """
     # Iterate through a list of waves.
+
     for wave in waves:
+        
+        # For drawing circles on detected features
+        #center = (wave.centroid[0],wave.centroid[1])
+        #radius = 15
+        #cv2.circle(frame,center,radius,(0,255,0),2)
+
         if wave.death is None:
             # If wave is a wave, draw green, else yellow.
             # Set wave text accordingly.
@@ -187,34 +194,35 @@ def draw(waves, frame, resize_factor):
                 drawing_color = (0, 255, 255)
                 text = ("Potential Wave\nmass: {}\ndisplacement: {}"
                         .format(wave.mass, wave.displacement))
-
-            # Draw Bounding Boxes:
-            # Get boundingbox coors from wave objects and resize.
-            rect = wave.boundingbox_coors
-            rect[:] = [resize_factor*rect[i] for i in range(4)]
-            frame = cv2.drawContours(frame, [rect], 0, drawing_color, 2)
-
-            # Use moving averages of wave centroid for stat locations
-            moving_x = np.mean([wave.centroid_vec[-k][0]
-                                for k
-                                in range(1, min(20, 1+len(wave.centroid_vec)))])
-            moving_y = np.mean([wave.centroid_vec[-k][1]
-                                for k
-                                in range(1, min(20, 1+len(wave.centroid_vec)))])
-
-            # Draw wave stats on each wave.
+            
             if len(wave.centroid_vec) > 20:
+                # Draw Bounding Boxes:
+                # Get boundingbox coors from wave objects and resize.
+                """
+                rect = wave.boundingbox_coors
+                rect[:] = [resize_factor*rect[i] for i in range(4)]
+                frame = cv2.drawContours(frame, [rect], 0, drawing_color, 2)"""
+
+                # Use moving averages of wave centroid for stat locations
+                moving_x = np.mean([wave.centroid_vec[-k][0]
+                                    for k
+                                    in range(1, min(20, 1+len(wave.centroid_vec)))])
+                moving_y = np.mean([wave.centroid_vec[-k][1]
+                                    for k
+                                    in range(1, min(20, 1+len(wave.centroid_vec)))])
+                
+                # Draw wave stats on each wave.
                 for i, j in enumerate(text.split('\n')):
                     frame = cv2.putText(
                                     frame,
                                     text=j,
                                     org=(int(resize_factor*moving_x),
                                          int(resize_factor*moving_y)
-                                            +(50 + i*30)),
+                                            +(50 + i*45)),
                                     fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                                    fontScale=1,
+                                    fontScale=1.5,
                                     color=drawing_color,
-                                    thickness=2,
+                                    thickness=3,
                                     lineType=cv2.LINE_AA)
 
     return frame

@@ -30,7 +30,7 @@ ANALYSIS_FRAME_HEIGHT = 180
 # The minimum orthogonal displacement to be considered an actual wave:
 DISPLACEMENT_THRESHOLD = 10
 # The minimum mass to be considered an actual wave:
-MASS_THRESHOLD = 1000
+MASS_THRESHOLD = 200
 
 # The axis of major waves in the scene, counter clockwise from horizon:
 GLOBAL_WAVE_AXIS = 5.0

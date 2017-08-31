@@ -129,39 +129,40 @@ def analyze(video, write_output=True):
                              wave.centroid))
 
         # Remove dead waves from tracked_waves.
-        for wave in tracked_waves:
-            # Remove dead waves.
-            if wave.death is not None:
-                # If wave became actual wave, add to recognized_waves.
-                if wave.recognized is True:
-                    recognized_waves.append(wave)
-                # Regardless, remove the wave.
-                tracked_waves.remove(wave)
+        dead_recognized_waves = [wave for wave in tracked_waves 
+                                 if wave.death is not None
+                                 and wave.recognized is True]
+        recognized_waves.extend(dead_recognized_waves)
+        
+        tracked_waves = [wave for wave in tracked_waves if wave.death is None]
 
         # Remove duplicate waves, keeping earliest wave.
         tracked_waves.sort(key=lambda x: x.birth, reverse=True)
         for wave in tracked_waves:
             other_waves = [wav for wav in tracked_waves if not wav == wave]
             if mwt_tracking.will_be_merged(wave, other_waves):
-                tracked_waves.remove(wave)
+                wave.death = frame_num
+        tracked_waves = [wave for wave in tracked_waves if wave.death is None]
         tracked_waves.sort(key=lambda x: x.birth, reverse=False)
 
         # Check sections for any new potential waves and add to
         # tracked_waves.
         for section in sections:
-            if mwt_tracking.will_be_merged(section, tracked_waves):
-                continue
-            else:
+            if not mwt_tracking.will_be_merged(section, tracked_waves):
                 tracked_waves.append(section)
+
+        #analysis_frame = cv2.cvtColor(analysis_frame, cv2.COLOR_GRAY2RGB)
 
         if write_output is True:
             # Draw detection boxes on original frame for visualization.
             original_frame = mwt_io.draw(
                                 tracked_waves,
                                 original_frame,
+                                #1)
                                 1/mwt_preprocessing.RESIZE_FACTOR)
 
             # Write frame to output video.
+            #out.write(analysis_frame)
             out.write(original_frame)
 
         # Increment the frame count.

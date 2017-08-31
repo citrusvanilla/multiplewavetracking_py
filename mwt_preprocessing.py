@@ -23,7 +23,7 @@ import cv2
 RESIZE_FACTOR = 0.25
 
 # Number of frames that constitute the background history:
-BACKGROUND_HISTORY = 300
+BACKGROUND_HISTORY = 900
 
 # Number of gaussians in BG mixture model:
 NUM_GAUSSIANS = 5
@@ -32,7 +32,7 @@ NUM_GAUSSIANS = 5
 BACKGROUND_RATIO = 0.7
 
 # Morphological kernel size (square):
-MORPH_KERN_SIZE = 5
+MORPH_KERN_SIZE = 3
 
 # Init the background modeling and foreground extraction mask.
 mask = cv2.bgsegm.createBackgroundSubtractorMOG(
