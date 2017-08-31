@@ -26,7 +26,7 @@ Wave recognition has uses in higher-level objectives such as automatic wave peri
 
 
 ## Program Architecture
-In accordance with the general comupter vision recognition workflow for objects in videos, the program is split into four modules (preprocessing, detection, tracking, and the 'Wave' class), in addition to main().  Module functions are declared and described in their header files (\*.hpp), with implementation and usage in the associated source files (\*.cpp).
+In accordance with the general comupter vision recognition workflow for objects in videos, the program is split into four modules (preprocessing, detection, tracking, and the 'Wave' class), in addition to main().
 
 
 ## Code Organization
