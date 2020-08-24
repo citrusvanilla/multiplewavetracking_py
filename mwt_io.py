@@ -81,12 +81,12 @@ def write_log(log, output_format="csv"):
     """
     # Print status update.
     if not log:
-        print "No waves or sections detected.  No log written."
+        print ("No waves or sections detected.  No log written.")
     else:
         if output_format == "csv":
-            print "Writing wave log to", WAVE_LOG_CSVFILE
+            print ("Writing wave log to", WAVE_LOG_CSVFILE)
         elif output_format == "json":
-            print "Writing wave log to", WAVE_LOG_JSONFILE
+            print ("Writing wave log to", WAVE_LOG_JSONFILE)
 
     # Declare headers here.
     log_headers = ["frame_num", "wave_id", "inst_mass", "max_mass",
@@ -137,9 +137,9 @@ def write_report(waves, performance):
     """
     # Provide User feedback here.
     if not waves:
-        print "No waves found.  No report written."
+        print ("No waves found.  No report written.")
     else:
-        print "Writing analysis report to", RECOGNIZED_WAVE_REPORT_FILE
+        print ("Writing analysis report to", RECOGNIZED_WAVE_REPORT_FILE)
 
     # Make an output directory if necessary.
     if not os.path.exists(OUTPUT_DIR):
