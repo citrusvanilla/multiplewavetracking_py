@@ -2,12 +2,12 @@
 
 ![Frame Grab](http://i.imgur.com/ev8KUtD.jpg)
 This repository contains a program for modeling, detecting, tracking, and recognizing near-shore ocean waves, 
-written in Python 2.7 with use of OpenCV 3+ library.
+written in Python 3+ with use of OpenCV 3+ library.
 
 This program is demoed on video clips from several Southern California locations in a [Vimeo video here](http://vimeo.com/citrusvanilla/multiplewavetracking).
 
 ## Software and Library Requirements
-* Python 2.7.11
+* Python 3+
 * Numpy 1.11.2
 * OpenCV 3.2.0
 
