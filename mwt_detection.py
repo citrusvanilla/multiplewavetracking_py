@@ -48,7 +48,7 @@ def find_contours(frame):
       contours: An array of contours, each represented by an array of
                 points.
     """
-    _, contours, hierarchy = cv2.findContours(
+    contours, hierarchy = cv2.findContours(
                                 image=frame,
                                 mode=cv2.RETR_EXTERNAL,
                                 method=cv2.CHAIN_APPROX_NONE,
