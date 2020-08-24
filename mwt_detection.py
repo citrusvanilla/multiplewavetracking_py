@@ -29,7 +29,7 @@ FLAGS_FILTER_BY_AREA = True
 FLAGS_FILTER_BY_INERTIA = True
 
 # Minimum area threshold for contour:
-MINIMUM_AREA = 10
+MINIMUM_AREA = 100
 # Maximum area threshold for contour:
 MAXIMUM_AREA = 1e7
 # Minimum inertia threshold for contour:

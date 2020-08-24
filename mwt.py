@@ -151,11 +151,7 @@ def analyze(video, write_output=True):
             if not mwt_tracking.will_be_merged(section, tracked_waves):
                 tracked_waves.append(section)
 
-        analysis_frame = cv2.cvtColor(analysis_frame, cv2.COLOR_GRAY2RGB)
-
-        # cv2.imshow("img", analysis_frame)
-
-        cv2.waitKey(1)
+        # analysis_frame = cv2.cvtColor(analysis_frame, cv2.COLOR_GRAY2RGB)
 
         if write_output is True:
             # Draw detection boxes on original frame for visualization.
@@ -166,10 +162,8 @@ def analyze(video, write_output=True):
                                 1/mwt_preprocessing.RESIZE_FACTOR)
 
             # Write frame to output video.
-            out.write(analysis_frame)
-            #out.write(original_frame)
-
-        # cv2.imshow("analysis", original_frame)
+            #out.write(analysis_frame)
+            out.write(original_frame)
 
         # Increment the frame count.
         frame_num += 1
