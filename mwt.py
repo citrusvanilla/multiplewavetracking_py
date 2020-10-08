@@ -178,9 +178,9 @@ def analyze(video, write_output=True):
         print ("Program performance: %0.1f frames per second." %performance)
         for i, wave in enumerate(recognized_waves):
             print ("Wave #{}: ID: {}, Birth: {}, Death: {}," \
-                   + " Max Displacement: {}, Max Mass: {}").format(
+                   + " Max Displacement: {}, Max Mass: {}".format(
                         i+1, wave.name, wave.birth, wave.death,
-                        wave.max_displacement, wave.max_mass)
+                        wave.max_displacement, wave.max_mass))
     else:
         print ("No waves recognized.")
 
