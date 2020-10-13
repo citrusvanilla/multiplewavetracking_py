@@ -103,7 +103,7 @@ def write_log(log, output_format="csv"):
     elif output_format == "json":
         output_path = os.path.join(OUTPUT_DIR, WAVE_LOG_JSONFILE)
 
-    with open(output_path, "wb") as outfile:
+    with open(output_path, "w") as outfile:
         if output_format == "csv":
             writer = csv.writer(outfile, delimiter=',')
             writer.writerow(log_headers)
