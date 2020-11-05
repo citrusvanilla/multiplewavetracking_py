@@ -51,7 +51,7 @@ def label(video, log):
                 # if centroid == [219, 169]:
                 sm_boundRect = cv2.boundingRect(contour)
                 print(sm_boundRect)
-                color = (255,0,0)
+                color = (0,0,255)
                 resize_factor = 1/mwt_preprocessing.RESIZE_FACTOR
                 boundRect = []
                 for i in range(len(sm_boundRect)):

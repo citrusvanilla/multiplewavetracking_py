@@ -21,6 +21,8 @@ import math
 
 import cv2
 
+import copy
+
 from mwt_objects import Section
 
 # Boolean flag to filter blobs by area:
@@ -153,7 +155,11 @@ def detect_sections(frame, frame_number):
 
         # If contour passes thresholds, convert it to a Section.
         # print(frame_number)
-        # cv2.imshow("kept", frame)
+        # boundRect = cv2.boundingRect(contour)
+        # display_frame = copy.deepcopy(frame)
+        # cv2.rectangle(display_frame, (int(boundRect[0]), int(boundRect[1])), \
+        #         (int(boundRect[0]+boundRect[2]), int(boundRect[1]+boundRect[3])), 255, 2)
+        # cv2.imshow("kept", display_frame)
         # cv2.waitKey(0)
         # cv2.destroyAllWindows()
         section = Section(points=contour, birth=frame_number)

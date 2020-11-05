@@ -26,7 +26,7 @@ OUTPUT_DIR = "output"
 WAVE_LOG_CSVFILE = "wave_log.csv"
 WAVE_LOG_JSONFILE = "wave_log.json"
 RECOGNIZED_WAVE_REPORT_FILE = "recognized_waves.txt"
-TRACKED_WAVE_FILE = "processed_waves.mp4"
+TRACKED_WAVE_FILE = "tracked_waves.mp4"
 
 
 ## ========================================================
@@ -60,8 +60,8 @@ def create_video_writer(input_video):
     out = cv2.VideoWriter(output_path,
                           fourcc,
                           fps,
-                          (int(original_width / 4), int(original_height / 4)),
-                          False)
+                          (int(original_width), int(original_height)),
+                          True)
 
     return out
 
