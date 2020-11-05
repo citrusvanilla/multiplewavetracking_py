@@ -97,6 +97,8 @@ def analyze(video, write_output=True):
     # Initiate a timer for program performance:
     time_start = time.time()
 
+    # cv2.namedWindow('Original')
+    # cv2.namedWindow('Preprocessed')
     # The main loop is here:
     while True:
 
@@ -110,6 +112,15 @@ def analyze(video, write_output=True):
 
         # Preprocess frames.
         analysis_frame = mwt_preprocessing.preprocess(original_frame)
+        # cv2.imshow('Preprocessed',analysis_frame)
+        # cv2.imshow('Original', original_frame)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
+        if frame_num == 63:
+            cv2.imshow("Original", original_frame)
+            cv2.imshow('analysis', analysis_frame)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
 
         # Detect all sections.
         sections = mwt_detection.detect_sections(analysis_frame,
@@ -155,15 +166,18 @@ def analyze(video, write_output=True):
 
         if write_output is True:
             # Draw detection boxes on original frame for visualization.
-            original_frame = mwt_io.draw(
-                                tracked_waves,
-                                original_frame,
-                                #1)
-                                1/mwt_preprocessing.RESIZE_FACTOR)
+            # original_frame = mwt_io.draw(
+            #                     tracked_waves,
+            #                     original_frame,
+            #                     #1)
+            #                     1/mwt_preprocessing.RESIZE_FACTOR)
 
             # Write frame to output video.
-            #out.write(analysis_frame)
-            out.write(original_frame)
+            # cv2.imshow('processed', analysis_frame)
+            # cv2.waitKey(0)
+            # cv2.destroyAllWindows()
+            #out.write(original_frame)
+            out.write(analysis_frame)
 
         # Increment the frame count.
         frame_num += 1
@@ -216,7 +230,7 @@ def main(argv):
     # Get a wave log, list of recognized waves, and program performance
     # from analyze, as well as create a visualization video.
     recognized_waves, wave_log, program_speed = analyze(inputvideo,
-                                                        write_output=True)
+                                                        write_output=False)
 
     # Write the wave log to csv.
     mwt_io.write_log(wave_log, output_format="json")

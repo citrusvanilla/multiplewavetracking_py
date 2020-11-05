@@ -15,7 +15,7 @@ from __future__ import division
 import os
 import csv
 import json
-
+import mwt_preprocessing
 import numpy as np
 import cv2
 
@@ -26,7 +26,7 @@ OUTPUT_DIR = "output"
 WAVE_LOG_CSVFILE = "wave_log.csv"
 WAVE_LOG_JSONFILE = "wave_log.json"
 RECOGNIZED_WAVE_REPORT_FILE = "recognized_waves.txt"
-TRACKED_WAVE_FILE = "tracked_waves.mp4"
+TRACKED_WAVE_FILE = "processed_waves.mp4"
 
 
 ## ========================================================
@@ -60,8 +60,8 @@ def create_video_writer(input_video):
     out = cv2.VideoWriter(output_path,
                           fourcc,
                           fps,
-                          (int(original_width), int(original_height)),
-                          isColor=True)
+                          (int(original_width / 4), int(original_height / 4)),
+                          False)
 
     return out
 
@@ -198,31 +198,31 @@ def draw(waves, frame, resize_factor):
             if len(wave.centroid_vec) > 20:
                 # Draw Bounding Boxes:
                 # Get boundingbox coors from wave objects and resize.
-                """
+                
                 rect = wave.boundingbox_coors
                 rect[:] = [resize_factor*rect[i] for i in range(4)]
-                frame = cv2.drawContours(frame, [rect], 0, drawing_color, 2)"""
+                frame = cv2.drawContours(frame, [rect], 0, drawing_color, 2)
 
                 # Use moving averages of wave centroid for stat locations
-                moving_x = np.mean([wave.centroid_vec[-k][0]
-                                    for k
-                                    in range(1, min(20, 1+len(wave.centroid_vec)))])
-                moving_y = np.mean([wave.centroid_vec[-k][1]
-                                    for k
-                                    in range(1, min(20, 1+len(wave.centroid_vec)))])
+                # moving_x = np.mean([wave.centroid_vec[-k][0]
+                #                     for k
+                #                     in range(1, min(20, 1+len(wave.centroid_vec)))])
+                # moving_y = np.mean([wave.centroid_vec[-k][1]
+                #                     for k
+                #                     in range(1, min(20, 1+len(wave.centroid_vec)))])
                 
-                # Draw wave stats on each wave.
-                for i, j in enumerate(text.split('\n')):
-                    frame = cv2.putText(
-                                    frame,
-                                    text=j,
-                                    org=(int(resize_factor*moving_x),
-                                         int(resize_factor*moving_y)
-                                            +(50 + i*45)),
-                                    fontFace=cv2.FONT_HERSHEY_SIMPLEX,
-                                    fontScale=1.5,
-                                    color=drawing_color,
-                                    thickness=3,
-                                    lineType=cv2.LINE_AA)
+                # # Draw wave stats on each wave.
+                # for i, j in enumerate(text.split('\n')):
+                #     frame = cv2.putText(
+                #                     frame,
+                #                     text=j,
+                #                     org=(int(resize_factor*moving_x),
+                #                          int(resize_factor*moving_y)
+                #                             +(50 + i*45)),
+                #                     fontFace=cv2.FONT_HERSHEY_SIMPLEX,
+                #                     fontScale=1.5,
+                #                     color=drawing_color,
+                #                     thickness=3,
+                #                     lineType=cv2.LINE_AA)
 
     return frame

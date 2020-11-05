@@ -152,8 +152,12 @@ def detect_sections(frame, frame_number):
             continue
 
         # If contour passes thresholds, convert it to a Section.
+        # print(frame_number)
+        # cv2.imshow("kept", frame)
+        # cv2.waitKey(0)
+        # cv2.destroyAllWindows()
         section = Section(points=contour, birth=frame_number)
-
+        
         # 3. Add the section to sections list.
         sections.append(section)
 
