@@ -200,7 +200,10 @@ def draw(waves, frame, resize_factor):
                 # Get boundingbox coors from wave objects and resize.
                 
                 rect = wave.boundingbox_coors
-                rect[:] = [resize_factor*rect[i] for i in range(4)]
+                # [[bottom left], [top left], [top right], [bottom right]]
+                print("orig", rect)
+                rect[:] = [(resize_factor)*rect[i] for i in range(4)]
+                print("scaled 1", rect)
                 frame = cv2.drawContours(frame, [rect], 0, drawing_color, 2)
 
                 # Use moving averages of wave centroid for stat locations
