@@ -169,11 +169,11 @@ def analyze(video, write_output=True):
 
             # Write frame to output video.
             #print(frame_num, tracked_waves)
-            if (len(tracked_waves)):
-                cv2.imshow('processed', original_frame)
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
-            out.write(original_frame)
+            # if (len(tracked_waves)):
+            #     cv2.imshow('processed', original_frame)
+            #     cv2.waitKey(0)
+            #     cv2.destroyAllWindows()
+            # out.write(original_frame)
             #out.write(analysis_frame)
 
         # Increment the frame count.
