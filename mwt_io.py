@@ -159,6 +159,30 @@ def write_report(waves, performance):
             text_file.write("Max Displacement: {}, Max Mass: {}\n"
                             .format(wave.max_displacement, wave.max_mass))
 
+def scale_up_rect(rect):
+    # find the slope between bottom left and top right
+    m_diag_1 = (rect[2][1] - rect[0][1]) / (rect[2][0] - rect[0][0])
+    # find slope between top left and bottom right
+    m_diag_2 = (rect[1][1] - rect[3][1]) / (rect[1][0] - rect[3][0])
+
+    delta_x = (rect[3][0] - rect[1][0]) * 0.25
+    delta_y = (rect[0][1] - rect[1][1]) * 0.75
+
+    new_rect = copy.deepcopy(rect)
+    # use some math to figure out how far down the line we need to 'walk'
+    new_rect[0][0] -= delta_x/math.sqrt(1 + m_diag_1**2)
+    new_rect[0][1] += m_diag_1 * (new_rect[0][0] - rect[0][0]) + delta_y
+
+    new_rect[1][0] -= delta_x/math.sqrt(1 + m_diag_2**2)
+    new_rect[1][1] += m_diag_2 * (new_rect[1][0] - rect[1][0]) - delta_y
+
+    new_rect[2][0] += delta_x/math.sqrt(1 + m_diag_1**2)
+    new_rect[2][1] += m_diag_1 * (new_rect[2][0] - rect[2][0]) - delta_y
+
+    new_rect[3][0] += delta_x/math.sqrt(1 + m_diag_2**2)
+    new_rect[3][1] += m_diag_2 * (new_rect[3][0] - rect[3][0]) + delta_y
+    
+    return new_rect
 
 def draw(waves, frame, resize_factor):
     """Simple function to draw on a frame for output.  Draws bounding
@@ -177,6 +201,7 @@ def draw(waves, frame, resize_factor):
     """
     # Iterate through a list of waves.
 
+    drawn = False
     for wave in waves:
         
         # For drawing circles on detected features
@@ -197,6 +222,7 @@ def draw(waves, frame, resize_factor):
                         .format(wave.mass, wave.displacement))
             
             if len(wave.centroid_vec) > 20:
+                drawn = True
                 # Draw Bounding Boxes:
                 # Get boundingbox coors from wave objects and resize.
                 
@@ -204,67 +230,15 @@ def draw(waves, frame, resize_factor):
                 # [[bottom left], [top left], [top right], [bottom right]]
                 # Each one is a tuple of (x,y) from the top left
                  
-                print("orig", rect)
                 scale_factor = 0.25
                 rect[:] = [(resize_factor)*rect[i] for i in range(4)]
-                print("scaled 1", rect)
-                # find the slope between bottom left and top right
-                yb1 = abs(rect[3][1] - rect[1][1])
-                xb1 = abs(rect[3][0] - rect[1][0])
-                euclaid = math.sqrt((yb1*yb1)+(xb1*xb1))
-                yb2 = abs(rect[2][1] - rect[0][1])
-                xb2 = abs(rect[2][0] - rect[0][0])
-
-                yb1 = yb1 *.25
-                xb1 = xb1 * .25
-                yb2 = yb2 *.25
-                xb2 = xb2 *.25
-                new_rect = copy.deepcopy(rect)
-
-                new_rect[0][0] -=  xb1
-                new_rect[0][1] -=  yb1
-
-                new_rect[1][0] -= xb2
-                new_rect[1][1] += yb2
-
-                new_rect[2][0] += xb2
-                new_rect[2][1] -= yb2
-
-                new_rect[3][0] += xb1
-                new_rect[3][1] += yb1
-                '''
-                m_diag_1 = (rect[2][1] - rect[0][1]) / (rect[2][0] - rect[0][0])
-                b_1 = -1 * m_diag_1 * rect[0][0] + rect[0][1]
-                # find slope between top left and bottom right
-                m_diag_2 = (rect[1][1] - rect[3][1]) / (rect[1][0] - rect[3][0])
-                b_2 = -1 * m_diag_2 * rect[0][0] + rect[0][1]
-                print("y1 =", m_diag_1, "x +", b_1)
-                print("y2 =", m_diag_2, "x +", b_2)
-                delta_x = (rect[3][0] - rect[1][0]) * scale_factor
-                delta_y = (rect[3][1] - rect[1][1]) * scale_factor
-                new_rect = copy.deepcopy(rect)
-                new_rect[0][0] -= delta_x
-                new_rect[0][1] = m_diag_1 * new_rect[0][0] + b_1
-
-                new_rect[1][0] -= delta_x
-                new_rect[1][1] = m_diag_2 * new_rect[1][0] + b_2
-
-                new_rect[2][0] += delta_x
-                new_rect[2][1] = m_diag_1 * new_rect[2][0] + b_1
-
-                new_rect[3][0] += delta_x
-                new_rect[3][1] = m_diag_2 * new_rect[3][0] + b_2
-                '''
+                new_rect = scale_up_rect(rect)
                 
-                print('Scaled 2', new_rect)
                 drawing_color = (0,255,0)
                 frame = cv2.drawContours(frame, [rect], 0, drawing_color, 2)
                 drawing_color = (0,0,255)
                 frame = cv2.drawContours(frame, [new_rect], 0, drawing_color, 2)
 
-                cv2.imshow('processed', frame)
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
                 # Use moving averages of wave centroid for stat locations
                 # moving_x = np.mean([wave.centroid_vec[-k][0]
                 #                     for k
@@ -287,4 +261,8 @@ def draw(waves, frame, resize_factor):
                 #                     thickness=3,
                 #                     lineType=cv2.LINE_AA)
 
+    if drawn:
+        cv2.imshow('processed', frame)
+        cv2.waitKey(0)
+        cv2.destroyAllWindows()
     return frame
