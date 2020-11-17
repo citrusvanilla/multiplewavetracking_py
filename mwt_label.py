@@ -13,11 +13,10 @@ def label(wave_list, fps, dead=False):
     for wave in wave_list:
         # Display waves for rating
         if len(wave.frame_data) >= fps or dead:
-            cv2.imshow("wave", wave.frame_data[0])
+            cv2.imshow("Enter a number between 0 and 9", wave.frame_data[0])
             ret = -1
             # '0' is ord 48, '9' is ord 57 
             while (ret < 48 or ret > 57):
-                print("Enter a number between 0 and 9")
                 ret = cv2.waitKey(0)
 
             # User enters 0-9. Rating is scaled to be 1-10
