@@ -45,7 +45,7 @@ class Section(object):
     tracking routine.
     """
     # pylint: disable=too-many-instance-attributes
-    def __init__(self, points, birth):
+    def __init__(self, points, birth, frame):
         self.name = _generate_name()
         self.points = points
         self.birth = birth
@@ -69,6 +69,7 @@ class Section(object):
         self.max_mass = self.mass
         self.recognized = False
         self.death = None
+        self.frame_data = [frame]#_rotate(self.boundingbox_coors, frame)] <-- function Broms is writing
 
 
     def update_searchroi_coors(self):
@@ -192,6 +193,8 @@ class Section(object):
 
         self.boundingbox_coors = boundingbox_coors
 
+    def update_frame_data(self, frame):
+        self.frame_data.append(frame)#_rotate(self.boundingbox_coors, frame))
 
     def update_displacement(self):
         """Evaluates orthogonal displacement compared to original axis.

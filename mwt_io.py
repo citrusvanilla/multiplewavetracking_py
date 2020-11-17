@@ -260,9 +260,4 @@ def draw(waves, frame, resize_factor):
                 #                     color=drawing_color,
                 #                     thickness=3,
                 #                     lineType=cv2.LINE_AA)
-
-    if drawn:
-        cv2.imshow('processed', frame)
-        cv2.waitKey(0)
-        cv2.destroyAllWindows()
     return frame

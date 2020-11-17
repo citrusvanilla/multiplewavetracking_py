@@ -57,7 +57,7 @@ def will_be_merged(section, list_of_waves):
     return going_to_be_merged
 
 
-def track(list_of_waves, frame, frame_number, last_frame):
+def track(list_of_waves, frame, frame_number, last_frame, original_frame):
     """Tracking routine performed by updating the dynamic Wave
     attributes.
 
@@ -91,6 +91,9 @@ def track(list_of_waves, frame, frame_number, last_frame):
 
         # Update bounding boxes for display.
         wave.update_boundingbox_coors()
+
+        # Save frame data for rating
+        wave.update_frame_data(original_frame)
 
         # Update displacement vectors.
         wave.update_displacement()

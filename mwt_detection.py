@@ -127,7 +127,7 @@ def keep_contour(contour,
 ## ========================================================
 
 
-def detect_sections(frame, frame_number):
+def detect_sections(frame, frame_number, original_frame):
     """Finds sections that meet the user-defined criteria.
 
     Args:
@@ -154,15 +154,8 @@ def detect_sections(frame, frame_number):
             continue
 
         # If contour passes thresholds, convert it to a Section.
-        # print(frame_number)
-        # boundRect = cv2.boundingRect(contour)
-        # display_frame = copy.deepcopy(frame)
-        # cv2.rectangle(display_frame, (int(boundRect[0]), int(boundRect[1])), \
-        #         (int(boundRect[0]+boundRect[2]), int(boundRect[1]+boundRect[3])), 255, 2)
-        # cv2.imshow("kept", display_frame)
-        # cv2.waitKey(0)
-        # cv2.destroyAllWindows()
-        section = Section(points=contour, birth=frame_number)
+        section = Section(points=contour, birth=frame_number,
+                          frame=original_frame)
         
         # 3. Add the section to sections list.
         sections.append(section)
