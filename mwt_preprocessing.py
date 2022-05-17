@@ -1,20 +1,10 @@
-##
-##  Near-shore Wave Tracking
-##  mwt_preprocessing.py
-##
-##  Created by Justin Fung on 9/1/17.
-##  Copyright 2017 justin fung. All rights reserved.
-##
-## ========================================================
-
 """Routine for preprocessing video frames.
 
- Method of preprocessing is:
- -1. resize image
- -2. extract foreground
- -3. denoise image
+Method of preprocessing is:
+    1. resize image
+    2. extract foreground
+    3. denoise image
 """
-
 from __future__ import division
 
 import cv2
@@ -36,14 +26,16 @@ MORPH_KERN_SIZE = 3
 
 # Init the background modeling and foreground extraction mask.
 mask = cv2.bgsegm.createBackgroundSubtractorMOG(
-                                  history=BACKGROUND_HISTORY,
-                                  nmixtures=NUM_GAUSSIANS,
-                                  backgroundRatio=BACKGROUND_RATIO,
-                                  noiseSigma=0)
+    history=BACKGROUND_HISTORY,
+    nmixtures=NUM_GAUSSIANS,
+    backgroundRatio=BACKGROUND_RATIO,
+    noiseSigma=0,
+)
 
 # Init the morphological transformations for denoising kernel.
-kernel = cv2.getStructuringElement(cv2.MORPH_RECT,
-                                   (MORPH_KERN_SIZE, MORPH_KERN_SIZE))
+kernel = cv2.getStructuringElement(
+    cv2.MORPH_RECT, (MORPH_KERN_SIZE, MORPH_KERN_SIZE)
+)
 
 
 def _resize(frame):
@@ -55,26 +47,28 @@ def _resize(frame):
     Returns:
       resized_frame: the frame, resized
     """
-    resized_frame = cv2.resize(frame,
-                               None,
-                               fx=RESIZE_FACTOR,
-                               fy=RESIZE_FACTOR,
-                               interpolation=cv2.INTER_AREA)
+    resized_frame = cv2.resize(
+        frame,
+        None,
+        fx=RESIZE_FACTOR,
+        fy=RESIZE_FACTOR,
+        interpolation=cv2.INTER_AREA,
+    )
 
     return resized_frame
 
 
 def preprocess(frame):
-    """Preprocesses video frames through resizing, background
-    modeling, and denoising.
+    """Preprocess video frames.
+
+    Resize, perform background modeling, and denoise.
 
     Args:
-      input: A frame from a cv2.video_reader object to process
+        frame: A frame from a cv2.video_reader object to process
 
     Returns:
-      output: the preprocessed frame
+        output: the preprocessed frame
     """
-
     # 1. Resize the input.
     output = _resize(frame)
 

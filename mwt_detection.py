@@ -1,18 +1,9 @@
-##
-##  Near-shore Wave Tracking
-##  mwt_detection.py
-##
-##  Created by Justin Fung on 9/1/17.
-##  Copyright 2017 justin fung. All rights reserved.
-##
-## ========================================================
-
 """Routine for detecting potential waves.
 
 Method for detecting is:
--1. detect contours
--2. filter contours
--3. create list of wave objects from filtered contours
+    1. detect contours
+    2. filter contours
+    3. create list of wave objects from filtered contours
 """
 
 from __future__ import division
@@ -49,36 +40,41 @@ def find_contours(frame):
                 points.
     """
     contours, hierarchy = cv2.findContours(
-                                image=frame,
-                                mode=cv2.RETR_EXTERNAL,
-                                method=cv2.CHAIN_APPROX_NONE,
-                                hierarchy=None,
-                                offset=None)
+        image=frame,
+        mode=cv2.RETR_EXTERNAL,
+        method=cv2.CHAIN_APPROX_NONE,
+        hierarchy=None,
+        offset=None,
+    )
 
     return contours
 
 
-def keep_contour(contour,
-                 area=FLAGS_FILTER_BY_AREA,
-                 inertia=FLAGS_FILTER_BY_INERTIA,
-                 min_area=MINIMUM_AREA,
-                 max_area=MAXIMUM_AREA,
-                 min_inertia_ratio=MINIMUM_INERTIA_RATIO,
-                 max_inertia_ratio=MAXIMUM_INERTIA_RATIO):
-    """Contour filtering function utilizing OpenCV.  In our case,
+def keep_contour(
+    contour,
+    area=FLAGS_FILTER_BY_AREA,
+    inertia=FLAGS_FILTER_BY_INERTIA,
+    min_area=MINIMUM_AREA,
+    max_area=MAXIMUM_AREA,
+    min_inertia_ratio=MINIMUM_INERTIA_RATIO,
+    max_inertia_ratio=MAXIMUM_INERTIA_RATIO,
+):
+    """Return whether or not to keep a potential wave shape.
+
+    Contour filtering function utilizing OpenCV.  In our case,
     we are looking for oblong shapes that exceed a user-defined area.
 
     Args:
-      contour: A contour from an array of contours
-      area: boolean flag to filter contour by area
-      inertia: boolean flag to filter contour by inertia
-      min_area: minimum area threshold for contour
-      max_area: maximum area threshold for contour
-      min_inertia_ratio: minimum inertia threshold for contour
-      max_inertia_ratio: maximum inertia threshold for contour
+        contour: A contour from an array of contours
+        area: boolean flag to filter contour by area
+        inertia: boolean flag to filter contour by inertia
+        min_area: minimum area threshold for contour
+        max_area: maximum area threshold for contour
+        min_inertia_ratio: minimum inertia threshold for contour
+        max_inertia_ratio: maximum inertia threshold for contour
 
     Returns:
-      ret: A boolean TRUE if contour meets conditions, else FALSE
+        ret: A boolean TRUE if contour meets conditions, else FALSE
     """
     # Initialize the return value.
     ret = True
@@ -94,46 +90,48 @@ def keep_contour(contour,
 
     # Filter contours by inertia.
     if inertia is True and ret is True:
-        denominator = math.sqrt((2*moments['m11'])**2
-                                + (moments['m20']-moments['m02'])**2)
+        denominator = math.sqrt(
+            (2 * moments["m11"]) ** 2 + (moments["m20"] - moments["m02"]) ** 2
+        )
         epsilon = 0.01
         ratio = 0.0
 
         if denominator > epsilon:
-            cosmin = (moments['m20']-moments['m02']) / denominator
-            sinmin = 2*moments['m11'] / denominator
+            cosmin = (moments["m20"] - moments["m02"]) / denominator
+            sinmin = 2 * moments["m11"] / denominator
             cosmax = -cosmin
             sinmax = -sinmin
 
-            imin = (0.5*(moments['m20']+moments['m02'])
-                    - 0.5*(moments['m20']-moments['m02'])*cosmin
-                    - moments['m11']*sinmin)
-            imax = (0.5*(moments['m20']+moments['m02'])
-                    - 0.5*(moments['m20']-moments['m02'])*cosmax
-                    - moments['m11']*sinmax)
+            imin = (
+                0.5 * (moments["m20"] + moments["m02"])
+                - 0.5 * (moments["m20"] - moments["m02"]) * cosmin
+                - moments["m11"] * sinmin
+            )
+            imax = (
+                0.5 * (moments["m20"] + moments["m02"])
+                - 0.5 * (moments["m20"] - moments["m02"]) * cosmax
+                - moments["m11"] * sinmax
+            )
             ratio = imin / imax
         else:
             ratio = 1
 
         if ratio < min_inertia_ratio or ratio >= max_inertia_ratio:
             ret = False
-            #center.confidence = ratio * ratio;
+            # center.confidence = ratio * ratio;
 
     return ret
 
 
-## ========================================================
-
-
 def detect_sections(frame, frame_number):
-    """Finds sections that meet the user-defined criteria.
+    """Find sections that meet the user-defined criteria.
 
     Args:
-      frame: a frame from a cv2.video_reader object
-      frame_number: number of the frame in the video sequence
+        frame: a frame from a cv2.video_reader object
+        frame_number: number of the frame in the video sequence
 
     Returns:
-      sections: a list of Section objects
+        sections: a list of Section objects
     """
     # Convert to single channel for blob detection if necessary.
     if len(frame.shape) > 2:
